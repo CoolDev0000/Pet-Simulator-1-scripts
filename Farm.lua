@@ -2,8 +2,10 @@ local R = workspace.__REMOTES
 local S = R.Core["Get Stats"]:InvokeServer().Save
 local M = R.Game.Coins
 
-local ID = 12345670 --pet id
-local T = "Christmas3 Cane" -- to destroy
+local ID = 12345670 -- pet id
+-- to destroy
+local T1 = "Christmas3 Cane"
+local T2 = "Christmas3 Small Cane"
 
 local L = 0
 for _, p in pairs(S.Pets) do
@@ -32,11 +34,16 @@ while _G.FARM do
     task.wait()
     
     if not C or C.Parent ~= workspace.__THINGS.Coins then
+        C = nil
         for _, v in pairs(workspace.__THINGS.Coins:GetChildren()) do
             local N = v:FindFirstChild("CoinName")
-            if N and N.Value == T then
-                C = v
-                break
+            if N then
+                if N.Value == T1 then
+                    C = v
+                    break
+                elseif not C and N.Value == T2 then
+                    C = v
+                end
             end
         end
     end
