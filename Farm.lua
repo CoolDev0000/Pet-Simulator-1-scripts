@@ -1,3 +1,5 @@
+--CoolDev
+
 local R = workspace.__REMOTES
 local S = R.Core["Get Stats"]:InvokeServer().Save
 local M = R.Game.Coins
