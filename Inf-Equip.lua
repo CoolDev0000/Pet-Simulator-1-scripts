@@ -1,20 +1,18 @@
 -- CoolDev
 
 local CONFIG = {
-    ALT_ACCOUNT = ""  -- Enter alt account name here
+    ALT_ACCOUNT = ""
 }
-
---don't change anything from the bottom
 
 local function calculatePetPower(pet)
     local power = 0
     
     if pet.dm then
-        power = power + 10000  -- Dark Matter
+        power = power + 10000
     elseif pet.r then
-        power = power + 1000   -- Rainbow
+        power = power + 1000
     elseif pet.g then
-        power = power + 100    -- Golden
+        power = power + 100
     end
     
     if pet.lvl then
@@ -24,7 +22,6 @@ local function calculatePetPower(pet)
     return power
 end
 
---sort
 local function getPetsSortedByPower()
     local pets = getSaveData().Pets
     local petPowerList = {}
@@ -48,7 +45,6 @@ local function getPetsSortedByPower()
     return sortedPets
 end
 
---get best
 local function getBestUnequippedPets(limit)
     local sortedPets = getPetsSortedByPower()
     local bestPets = {}
@@ -80,7 +76,6 @@ function getEquippedPets()
     return equipped
 end
 
---main
 local maxPets = getSaveData().MaxPets
 local TradeRemote = workspace.__REMOTES.Game.Trading
 local InventoryRemote = workspace.__REMOTES.Game.Inventory
@@ -142,16 +137,15 @@ repeat
         local power = calculatePetPower(pet)
         local rarityTag = ""
         if pet.dm then 
-            rarityTag = "💀 [DM]"
+            rarityTag = "[DM]"
         elseif pet.r then 
-            rarityTag = "🌈 [RB]"
+            rarityTag = "[RB]"
         elseif pet.g then 
-            rarityTag = "⭐ [GL]"
+            rarityTag = "[GL]"
         end
-        print(string.format("  %d. %s %s (⚡ Power: %d)", index, rarityTag, pet.n or "Unknown", power))
+        print(string.format("%d. %s %s (Power: %d)", index, rarityTag, pet.n or "Unknown", power))
     end
     
-    -- Equip each pet
     for _, pet in pairs(bestPetsToEquip) do
         task.spawn(function()
             local success = InventoryRemote:InvokeServer('Equip', pet.id)
