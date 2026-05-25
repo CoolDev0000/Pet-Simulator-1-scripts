@@ -50,7 +50,7 @@ local Theme = {
 }
 
 local Prism = {}
-Prism.Version = "1.2.0"
+Prism.Version = "1.2.1"
 Prism.Theme = Theme
 Prism.LoadDemo = true
 
@@ -369,42 +369,59 @@ function Prism:CreateWindow(opts)
         ClipsDescendants = true,
         Parent = RootGui,
     })
-    Corner(win, UDim.new(0, 14))
-    Stroke(win, Theme.BorderLight, 1, 0.5)
+    Corner(win, UDim.new(0, 12))
+    Stroke(win, Theme.BorderLight, 1, 0.55)
 
     shadow.Position = UDim2.new(
         win.Position.X.Scale, win.Position.X.Offset - 12,
         win.Position.Y.Scale, win.Position.Y.Offset - 10
     )
 
+    local WIN_PAD = 12
+    local HEADER_H = 44
+    local SIDEBAR_W = 98
+    local SIDEBAR_GAP = 8
+
+    -- Header (fills top, clipped by window corners)
+    local header = Create("Frame", {
+        Name = "Header",
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, HEADER_H),
+        Position = UDim2.new(0, 0, 0, 0),
+        Parent = win,
+    })
+
+    -- Accent line inset so it respects rounded corners
     local accentBar = Create("Frame", {
         BorderSizePixel = 0,
         BackgroundColor3 = Theme.Accent,
-        Size = UDim2.new(1, 0, 0, 3),
-        Parent = win,
+        Size = UDim2.new(1, -(WIN_PAD * 2), 0, 2),
+        Position = UDim2.new(0, WIN_PAD, 0, 0),
+        Parent = header,
     })
     Gradient(accentBar, Theme.Accent, Theme.Accent2, 0)
 
     local titleBar = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 50),
+        Size = UDim2.new(1, 0, 1, -3),
         Position = UDim2.new(0, 0, 0, 3),
-        Parent = win,
+        Parent = header,
     })
 
     Create("Frame", {
         BackgroundColor3 = Theme.Border,
-        BackgroundTransparency = 0.6,
+        BackgroundTransparency = 0.35,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -32, 0, 1),
-        Position = UDim2.new(0, 16, 1, -1),
-        Parent = titleBar,
+        Size = UDim2.new(1, -(WIN_PAD * 2), 0, 1),
+        Position = UDim2.new(0, WIN_PAD, 1, 0),
+        Parent = header,
     })
 
     local titleBlock = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -96, 1, 0),
-        Position = UDim2.new(0, 18, 0, 6),
+        Size = UDim2.new(1, -92, 1, 0),
+        Position = UDim2.new(0, WIN_PAD + 4, 0, 5),
         Parent = titleBar,
     })
     VList(titleBlock, 1)
@@ -437,7 +454,7 @@ function Prism:CreateWindow(opts)
     local btnRow = Create("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.fromOffset(72, 30),
-        Position = UDim2.new(1, -86, 0, 10),
+        Position = UDim2.new(1, -80, 0, 7),
         Parent = titleBar,
     })
     HList(btnRow, 8)
@@ -474,63 +491,69 @@ function Prism:CreateWindow(opts)
     local body = Create("Frame", {
         Name = "Body",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -28, 1, -66),
-        Position = UDim2.new(0, 14, 0, 58),
+        Size = UDim2.new(1, -(WIN_PAD * 2), 1, -(HEADER_H + WIN_PAD + 4)),
+        Position = UDim2.new(0, WIN_PAD, 0, HEADER_H + 4),
         Parent = win,
     })
 
-    local SIDEBAR_W = 136
     local sidebar = Create("Frame", {
         BackgroundColor3 = Theme.Surface,
-        BackgroundTransparency = 0.15,
+        BackgroundTransparency = 0,
         Size = UDim2.new(0, SIDEBAR_W, 1, 0),
         Parent = body,
     })
-    Corner(sidebar, Theme.CornerSm)
-    Stroke(sidebar, Theme.Border, 1, 0.4)
-    Pad(sidebar, 10, 8, 10, 8)
+    Corner(sidebar, UDim.new(0, 8))
+    Pad(sidebar, 8, 6, 8, 6)
 
     Create("TextLabel", {
         BackgroundTransparency = 1,
         Font = Theme.FontBold,
         Text = "MENU",
         TextColor3 = Theme.TextDim,
-        TextSize = 10,
+        TextSize = 9,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(1, 0, 0, 14),
-        Position = UDim2.new(0, 4, 0, 2),
+        Size = UDim2.new(1, 0, 0, 12),
+        Position = UDim2.new(0, 2, 0, 0),
         Parent = sidebar,
     })
 
     local tabButtons = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, -22),
-        Position = UDim2.new(0, 0, 0, 20),
+        Size = UDim2.new(1, 0, 1, -18),
+        Position = UDim2.new(0, 0, 0, 16),
         Parent = sidebar,
     })
-    VList(tabButtons, 5)
+    VList(tabButtons, 4)
 
     local tabIndicator = Create("Frame", {
         BackgroundColor3 = Theme.Accent,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 3, 0, 38),
-        Position = UDim2.new(0, 0, 0, 0),
-        ZIndex = 2,
+        Size = UDim2.new(0, 2, 0, 34),
+        Position = UDim2.new(0, 2, 0, 0),
+        ZIndex = 5,
         Parent = tabButtons,
     })
-    Corner(tabIndicator, UDim.new(0, 2))
-    Gradient(tabIndicator)
 
-    local content = Create("Frame", {
-        BackgroundColor3 = Theme.Surface,
-        BackgroundTransparency = 0.1,
-        Size = UDim2.new(1, -(SIDEBAR_W + 12), 1, 0),
-        Position = UDim2.new(0, SIDEBAR_W + 12, 0, 0),
-        ClipsDescendants = false,
+    -- Thin divider (not a thick bar)
+    Create("Frame", {
+        Name = "Divider",
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 1, 1, -4),
+        Position = UDim2.new(0, SIDEBAR_W + math.floor(SIDEBAR_GAP / 2), 0, 2),
         Parent = body,
     })
-    Corner(content, Theme.CornerSm)
-    Stroke(content, Theme.Border, 1, 0.35)
+
+    local content = Create("Frame", {
+        BackgroundColor3 = Theme.Card,
+        BackgroundTransparency = 0.35,
+        Size = UDim2.new(1, -(SIDEBAR_W + SIDEBAR_GAP + 1), 1, 0),
+        Position = UDim2.new(0, SIDEBAR_W + SIDEBAR_GAP + 1, 0, 0),
+        ClipsDescendants = true,
+        Parent = body,
+    })
+    Corner(content, UDim.new(0, 8))
 
     local pagesHost = Create("Frame", {
         BackgroundTransparency = 1,
@@ -538,7 +561,6 @@ function Prism:CreateWindow(opts)
         ClipsDescendants = true,
         Parent = content,
     })
-    Corner(pagesHost, Theme.CornerSm)
 
     local function MoveIndicator(btn)
         task.defer(function()
@@ -546,8 +568,8 @@ function Prism:CreateWindow(opts)
             local y = btn.AbsolutePosition.Y - tabButtons.AbsolutePosition.Y
             local h = btn.AbsoluteSize.Y
             Tween(tabIndicator, {
-                Position = UDim2.new(0, 0, 0, y),
-                Size = UDim2.new(0, 3, 0, h),
+                Position = UDim2.new(0, 2, 0, y),
+                Size = UDim2.new(0, 2, 0, h),
             }, Theme.TweenFast):Play()
         end)
     end
@@ -613,17 +635,17 @@ function Prism:CreateWindow(opts)
         local isFirst = #tabs == 0
         local tabBtn = Create("TextButton", {
             BackgroundColor3 = Theme.Card,
-            BackgroundTransparency = isFirst and 0.35 or 1,
+            BackgroundTransparency = isFirst and 0.4 or 1,
             Text = "",
-            Size = UDim2.new(1, 0, 0, 40),
+            Size = UDim2.new(1, 0, 0, 34),
             AutoButtonColor = false,
             Parent = tabButtons,
         })
-        Corner(tabBtn, Theme.CornerSm)
+        Corner(tabBtn, UDim.new(0, 6))
 
         tabBtn.MouseEnter:Connect(function()
             if activeTab and activeTab.Button == tabBtn then return end
-            Tween(tabBtn, { BackgroundTransparency = 0.6 }, Theme.TweenFast):Play()
+            Tween(tabBtn, { BackgroundTransparency = 0.55 }, Theme.TweenFast):Play()
         end)
         tabBtn.MouseLeave:Connect(function()
             if activeTab and activeTab.Button == tabBtn then return end
@@ -632,20 +654,20 @@ function Prism:CreateWindow(opts)
 
         local tabInner = Create("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -10, 1, 0),
-            Position = UDim2.new(0, 8, 0, 0),
+            Size = UDim2.new(1, -8, 1, 0),
+            Position = UDim2.new(0, 6, 0, 0),
             Parent = tabBtn,
         })
-        HList(tabInner, 10, Enum.VerticalAlignment.Center)
+        HList(tabInner, 6, Enum.VerticalAlignment.Center)
 
         local iconBg = Create("Frame", {
             BackgroundColor3 = Theme.Accent,
-            BackgroundTransparency = isFirst and 0.75 or 1,
-            Size = UDim2.fromOffset(28, 28),
+            BackgroundTransparency = isFirst and 0.8 or 1,
+            Size = UDim2.fromOffset(22, 22),
             LayoutOrder = 1,
             Parent = tabInner,
         })
-        Corner(iconBg, Theme.CornerSm)
+        Corner(iconBg, UDim.new(0, 5))
 
         local iconLbl = Create("TextLabel", {
             Name = "Icon",
@@ -653,7 +675,7 @@ function Prism:CreateWindow(opts)
             Font = Theme.FontBold,
             Text = icon,
             TextColor3 = isFirst and Theme.Accent or Theme.TextDim,
-            TextSize = 13,
+            TextSize = 12,
             Size = UDim2.fromScale(1, 1),
             Parent = iconBg,
         })
@@ -664,10 +686,10 @@ function Prism:CreateWindow(opts)
             Font = Theme.Font,
             Text = name,
             TextColor3 = isFirst and Theme.Text or Theme.TextDim,
-            TextSize = 14,
+            TextSize = 13,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextTruncate = Enum.TextTruncate.AtEnd,
-            Size = UDim2.new(1, -38, 0, 20),
+            Size = UDim2.new(1, -30, 0, 18),
             LayoutOrder = 2,
             Parent = tabInner,
         })
@@ -1308,7 +1330,7 @@ function Prism:CreateWindow(opts)
         end)
     end)
 
-    Drag(win, titleBar)
+    Drag(win, header)
     win:GetPropertyChangedSignal("Position"):Connect(function()
         shadow.Position = UDim2.new(
             win.Position.X.Scale, win.Position.X.Offset - 12,
@@ -1403,3 +1425,4 @@ if Prism.LoadDemo then
 end
 
 return Prism
+
