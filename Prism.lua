@@ -54,6 +54,92 @@ local Prism = {}
 Prism.Version = "2.0.0"
 Prism.Theme = Theme
 Prism.LoadDemo = true
+Prism.Icons = nil
+Prism.IconsUrl = "https://raw.githubusercontent.com/CoolDev0000/Pet-Simulator-1-scripts/refs/heads/main/icons.lua"
+Prism.IconsLocal = "PrismAssets/Icons.lua"
+
+function Prism:EnsureIcons()
+    if Prism.Icons then
+        return Prism.Icons
+    end
+
+    local function runSource(src)
+        local fn = loadstring(src)
+        if not fn then
+            return nil
+        end
+        return fn()
+    end
+
+    local ok, icons = pcall(function()
+        local src = game:HttpGet(Prism.IconsUrl)
+        return runSource(src)
+    end)
+    if ok and icons then
+        Prism.Icons = icons
+        return icons
+    end
+
+    if readfile then
+        ok, icons = pcall(function()
+            return runSource(readfile(Prism.IconsLocal))
+        end)
+        if ok and icons then
+            Prism.Icons = icons
+            return icons
+        end
+    end
+
+    warn("[PrismUI] Icons not loaded (HttpGet + local fallback failed)")
+    return nil
+end
+
+function Prism:LoadIcons(iconsModule)
+    Prism.Icons = iconsModule
+end
+
+local function ResolveIcon(icon)
+    Prism:EnsureIcons()
+    if typeof(icon) == "number" and icon > 0 then
+        return icon, nil, true
+    end
+    if Prism.Icons and Prism.Icons.Resolve then
+        return Prism.Icons.Resolve(icon)
+    end
+    if typeof(icon) == "string" then
+        return 0, icon, false
+    end
+    return 0, "•", false
+end
+
+local function MountIconIn(parent, icon, active, sizeScale)
+    local assetId, text, isImage = ResolveIcon(icon)
+    sizeScale = sizeScale or 0.55
+    if isImage and assetId > 0 then
+        local img = Create("ImageLabel", {
+            Name = "IconImage",
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://" .. tostring(assetId),
+            ImageColor3 = active and Theme.Text or Theme.TextDim,
+            ScaleType = Enum.ScaleType.Fit,
+            Size = UDim2.fromScale(sizeScale, sizeScale),
+            Position = UDim2.fromScale((1 - sizeScale) / 2, (1 - sizeScale) / 2),
+            Parent = parent,
+        })
+        return img, nil, true
+    end
+    local lbl = Create("TextLabel", {
+        Name = "Icon",
+        BackgroundTransparency = 1,
+        Font = Theme.FontBold,
+        Text = text or "•",
+        TextColor3 = active and Theme.Accent or Theme.TextDim,
+        TextSize = 14,
+        Size = UDim2.fromScale(1, 1),
+        Parent = parent,
+    })
+    return nil, lbl, false
+end
 
 Prism.Presets = {
     Default = {
@@ -510,6 +596,7 @@ function Prism:CreateWindow(opts)
     local logoIcon = opts.Logo or "◐"
 
     GetRoot()
+    Prism:EnsureIcons()
     Prism.Windows = Prism.Windows or {}
 
     local tabs = {}
@@ -597,15 +684,7 @@ function Prism:CreateWindow(opts)
         Corner(logoBox, UDim.new(0, 10))
         Gradient(logoBox, Theme.Accent, Theme.Accent2, 35)
         Tag(Stroke(logoBox, Theme.Accent2, 1, 0.5), "BorderLight")
-        Create("TextLabel", {
-            BackgroundTransparency = 1,
-            Text = logoIcon,
-            Font = Theme.FontBold,
-            TextColor3 = Theme.Text,
-            TextSize = 16,
-            Size = UDim2.fromScale(1, 1),
-            Parent = logoBox,
-        })
+        MountIconIn(logoBox, logoIcon, true, 0.62)
         logoOffset = 42
     end
 
@@ -774,7 +853,11 @@ function Prism:CreateWindow(opts)
             if dashboard then
                 Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
                 Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
-                Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+                if t.IconImage then
+                    Tween(t.IconImage, { ImageColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+                elseif t.Icon then
+                    Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+                end
             else
                 Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
                 Tween(t.Title, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
@@ -788,7 +871,11 @@ function Prism:CreateWindow(opts)
         if dashboard then
             Tween(data.Button, { BackgroundTransparency = 0.35 }, Theme.TweenFast):Play()
             Tween(data.IconBg, { BackgroundTransparency = 0.45 }, Theme.TweenFast):Play()
-            Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
+            if data.IconImage then
+                Tween(data.IconImage, { ImageColor3 = Theme.Text }, Theme.TweenFast):Play()
+            elseif data.Icon then
+                Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
+            end
         else
             Tween(data.Button, { BackgroundTransparency = 0 }, Theme.TweenFast):Play()
             Tween(data.Title, { TextColor3 = Theme.Text }, Theme.TweenFast):Play()
@@ -892,16 +979,9 @@ function Prism:CreateWindow(opts)
         }), "IconBg")
         Corner(iconBg, UDim.new(0, dashboard and 8 or 5))
 
-        local iconLbl = Tag(Create("TextLabel", {
-            Name = "Icon",
-            BackgroundTransparency = 1,
-            Font = Theme.FontBold,
-            Text = icon,
-            TextColor3 = isFirst and Theme.Accent or Theme.TextDim,
-            TextSize = dashboard and 15 or 12,
-            Size = UDim2.fromScale(1, 1),
-            Parent = iconBg,
-        }), "AccentText")
+        local iconImg, iconLbl = MountIconIn(iconBg, icon, isFirst, dashboard and 0.58 or 0.55)
+        if iconImg then Tag(iconImg, "AccentText") end
+        if iconLbl then Tag(iconLbl, "AccentText") end
 
         local titleLbl = Tag(Create("TextLabel", {
             Name = "Title",
@@ -923,6 +1003,7 @@ function Prism:CreateWindow(opts)
             Button = tabBtn,
             Stripe = tabStripe,
             Icon = iconLbl,
+            IconImage = iconImg,
             IconBg = iconBg,
             Title = titleLbl,
         }
@@ -1841,21 +1922,23 @@ function Prism:CreateWindow(opts)
 end
 
 if Prism.LoadDemo then
+    Prism:EnsureIcons()
     Prism:SetTheme("Hidden")
+    local I = Prism.Icons
 
     local Window = Prism:CreateWindow({
         Name = "Prism Hub",
         Subtitle = ".gg/prismui • demo",
-        Logo = "◐",
+        Logo = I and I.Logo or "Logo",
         Style = "Dashboard",
         Size = Vector2.new(900, 560),
         Keybind = Enum.KeyCode.RightControl,
         NotifyOnLoad = true,
     })
 
-    local Home = Window:Tab("Home", "⌂")
-    local Scripts = Window:Tab("Scripts", "<>")
-    local Settings = Window:Tab("Settings", "⚙")
+    local Home = Window:Tab("Home", I and I.Home or "⌂")
+    local Scripts = Window:Tab("Scripts", I and I.Code or "<>")
+    local Settings = Window:Tab("Settings", I and I.Settings or "⚙")
 
     Home:Hero("Hello, " .. LocalPlayer.Name, LocalPlayer.Name .. " • Prism Dashboard")
 
@@ -1888,4 +1971,9 @@ if Prism.LoadDemo then
     Cfg:Button("Destroy UI", function() Prism:Destroy() end)
 end
 
+task.defer(function()
+    Prism:EnsureIcons()
+end)
+
 return Prism
+
