@@ -61,66 +61,84 @@ local Theme = {
     TweenOpen = TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 }
 
+local EmojiIcons = {
+    Logo = "🔷",
+    Home = "🏠",
+    Code = "🧩",
+    Widgets = "🧩",
+    Settings = "⚙️",
+    Themes = "🎨",
+    Help = "❓",
+    User = "👤",
+    Bell = "🔔",
+    Star = "⭐",
+    Scripts = "📜",
+    Map = "🗺️",
+    Maps = "🗺️",
+    Discord = "💬",
+    Social = "💬",
+    Wave = "⚡",
+    Friends = "👥",
+    Server = "🖥️",
+    Alerts = "🔔",
+    System = "⚙️",
+    Notify = "🔔",
+}
+
 local BuiltinIcons = {
-    Ids = {
-        Logo = 129159931459891,
-        Home = 124054948741946,
-        Code = 101391085553696,
-        Settings = 86014294956636,
-        Themes = 128075735564797,
-        Help = 79592888732779,
-        User = 80217218300928,
-        Bell = 135374572541868,
-        Star = 133417372199798,
-        Map = 95598851353269,
-        Discord = 76737711111847,
-        Wave = 117470944830637,
-        Scripts = 0,
-        Friends = 0,
-        Server = 0,
-    },
-    Text = {
-        Logo = "◐", Home = "⌂", Code = "<>", Settings = "⚙", Themes = "◎",
-        Help = "?", User = "👤", Bell = "🔔", Star = "★", Map = "⌖",
-        Discord = "💬", Wave = "⚡", Scripts = "<>", Friends = "♥", Server = "▣",
-    },
+    Text = EmojiIcons,
 }
 
 function BuiltinIcons.Resolve(icon)
-    if typeOf(icon) == "number" and icon > 0 then
-        return icon, nil, true
-    end
     if typeOf(icon) ~= "string" then
         return 0, "•", false
     end
-    local id = BuiltinIcons.Ids[icon]
-    if typeOf(id) == "number" and id > 0 then
-        return id, BuiltinIcons.Text[icon], true
-    end
-    return 0, BuiltinIcons.Text[icon] or icon, false
+    return 0, EmojiIcons[icon] or icon, false
 end
 
 setmetatable(BuiltinIcons, {
     __index = function(_, key)
-        if BuiltinIcons.Ids[key] ~= nil or BuiltinIcons.Text[key] then
-            return key
+        if EmojiIcons[key] then
+            return EmojiIcons[key]
         end
         return nil
     end,
 })
 
 local Prism = {}
-Prism.Version = "2.0.1"
-Prism.Build = 3
+Prism.Version = "2.0.2"
+Prism.Build = 4
 Prism.Theme = Theme
 Prism.LoadDemo = true
+Prism.UseImageIcons = false
 Prism.Icons = nil
 Prism.IconsUrl = "https://raw.githubusercontent.com/CoolDev0000/Pet-Simulator-1-scripts/refs/heads/main/icons.lua"
 Prism.IconsLocal = "PrismAssets/Icons.lua"
 
+function Prism.ResolveEmoji(icon)
+    if typeOf(icon) ~= "string" then
+        return "•"
+    end
+    if EmojiIcons[icon] then
+        return EmojiIcons[icon]
+    end
+    if Prism.Icons and Prism.Icons.Text and Prism.Icons.Text[icon] then
+        return Prism.Icons.Text[icon]
+    end
+    if #icon <= 4 then
+        return icon
+    end
+    return "•"
+end
+
 function Prism:EnsureIcons()
     if Prism.Icons then
         return Prism.Icons
+    end
+
+    if not Prism.UseImageIcons then
+        Prism.Icons = BuiltinIcons
+        return BuiltinIcons
     end
 
     local function runSource(src)
@@ -304,47 +322,18 @@ local function Tag(inst, role)
     return inst
 end
 
-local function ResolveIcon(icon)
+local function MountEmoji(parent, icon, active, large)
     Prism:EnsureIcons()
-    if typeOf(icon) == "number" and icon > 0 then
-        return icon, nil, true
-    end
-    if Prism.Icons and type(Prism.Icons.Resolve) == "function" then
-        return Prism.Icons.Resolve(icon)
-    end
-    if typeOf(icon) == "string" then
-        return 0, icon, false
-    end
-    return 0, "•", false
-end
-
-local function MountIconIn(parent, icon, active, sizeScale)
-    local assetId, text, isImage = ResolveIcon(icon)
-    sizeScale = sizeScale or 0.55
-    local half = (1 - sizeScale) / 2
-
-    if isImage and assetId and assetId > 0 then
-        local img = Instance.new("ImageLabel")
-        img.Name = "IconImage"
-        img.BackgroundTransparency = 1
-        img.Image = "rbxassetid://" .. tostring(assetId)
-        img.ImageColor3 = active and Theme.Text or Theme.TextDim
-        if Enum.ScaleType and Enum.ScaleType.Fit then
-            img.ScaleType = Enum.ScaleType.Fit
-        end
-        img.Size = UDim2.new(sizeScale, 0, sizeScale, 0)
-        img.Position = UDim2.new(half, 0, half, 0)
-        img.Parent = parent
-        return img, nil, true
-    end
-
     local lbl = Instance.new("TextLabel")
     lbl.Name = "Icon"
     lbl.BackgroundTransparency = 1
-    lbl.Font = Theme.FontBold
-    lbl.Text = text or "•"
-    lbl.TextColor3 = active and Theme.Accent or Theme.TextDim
-    lbl.TextSize = 14
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = Prism.ResolveEmoji(icon)
+    lbl.TextColor3 = active and Theme.Text or Theme.TextDim
+    lbl.TextSize = large and 22 or 18
+    lbl.TextScaled = large
+    lbl.TextXAlignment = Enum.TextXAlignment.Center
+    lbl.TextYAlignment = Enum.TextYAlignment.Center
     lbl.Size = UDim2.new(1, 0, 1, 0)
     lbl.Parent = parent
     return nil, lbl, false
@@ -654,7 +643,7 @@ function Prism:CreateWindow(opts)
     local toggleKey = opts.Keybind or Enum.KeyCode.RightControl
     local notifyOnLoad = opts.NotifyOnLoad == true
     local dashboard = (opts.Style or "Dashboard") ~= "Classic"
-    local logoIcon = opts.Logo or "◐"
+    local logoIcon = opts.Logo or "🔷"
 
     GetRoot()
     Prism:EnsureIcons()
@@ -745,7 +734,7 @@ function Prism:CreateWindow(opts)
         Corner(logoBox, UDim.new(0, 10))
         Gradient(logoBox, Theme.Accent, Theme.Accent2, 35)
         Tag(Stroke(logoBox, Theme.Accent2, 1, 0.5), "BorderLight")
-        MountIconIn(logoBox, logoIcon, true, 0.62)
+        MountEmoji(logoBox, logoIcon, true, true)
         logoOffset = 42
     end
 
@@ -851,11 +840,27 @@ function Prism:CreateWindow(opts)
         }), "TextDim")
     end
 
-    local tabButtons = Create("Frame", {
+    local tabScroll = Tag(Create("ScrollingFrame", {
+        Name = "TabScroll",
         BackgroundTransparency = 1,
+        BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, dashboard and -52 or -18),
         Position = UDim2.new(0, 0, 0, dashboard and 0 or 16),
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Theme.Accent,
+        ScrollBarImageTransparency = 0.5,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
         Parent = sidebar,
+    }), "ScrollBar")
+
+    local tabButtons = Create("Frame", {
+        Name = "TabButtons",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Parent = tabScroll,
     })
     VList(tabButtons, dashboard and 8 or 4)
 
@@ -908,22 +913,24 @@ function Prism:CreateWindow(opts)
         Parent = content,
     })
 
+    local function SetTabIconColor(iconLbl, color)
+        if iconLbl and iconLbl.Parent then
+            Tween(iconLbl, { TextColor3 = color }, Theme.TweenFast):Play()
+        end
+    end
+
     local function SelectTab(data)
         for _, t in ipairs(tabs) do
             t.Page.Visible = false
             if dashboard then
                 Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
                 Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
-                if t.IconImage then
-                    Tween(t.IconImage, { ImageColor3 = Theme.TextDim }, Theme.TweenFast):Play()
-                elseif t.Icon then
-                    Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
-                end
+                SetTabIconColor(t.Icon, Theme.TextDim)
             else
                 Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
                 Tween(t.Title, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
                 Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
-                Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+                SetTabIconColor(t.Icon, Theme.TextDim)
                 if t.Stripe then t.Stripe.Visible = false end
             end
         end
@@ -932,16 +939,12 @@ function Prism:CreateWindow(opts)
         if dashboard then
             Tween(data.Button, { BackgroundTransparency = 0.35 }, Theme.TweenFast):Play()
             Tween(data.IconBg, { BackgroundTransparency = 0.45 }, Theme.TweenFast):Play()
-            if data.IconImage then
-                Tween(data.IconImage, { ImageColor3 = Theme.Text }, Theme.TweenFast):Play()
-            elseif data.Icon then
-                Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
-            end
+            SetTabIconColor(data.Icon, Theme.Text)
         else
             Tween(data.Button, { BackgroundTransparency = 0 }, Theme.TweenFast):Play()
             Tween(data.Title, { TextColor3 = Theme.Text }, Theme.TweenFast):Play()
             Tween(data.IconBg, { BackgroundTransparency = 0.5 }, Theme.TweenFast):Play()
-            Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
+            SetTabIconColor(data.Icon, Theme.Accent)
             if data.Stripe then data.Stripe.Visible = true end
         end
     end
@@ -955,7 +958,7 @@ function Prism:CreateWindow(opts)
     end
 
     function window:Tab(name, icon)
-        icon = icon or "•"
+        icon = Prism.ResolveEmoji(icon or name or "•")
 
         local page = Create("Frame", {
             Name = name .. "_Page",
@@ -988,11 +991,13 @@ function Prism:CreateWindow(opts)
         VList(pageContent, dashboard and 14 or 16)
 
         local isFirst = #tabs == 0
+        local tabOrder = #tabs + 1
         local tabBtn = Create("TextButton", {
             BackgroundColor3 = Theme.Card,
             BackgroundTransparency = isFirst and (dashboard and 0.35 or 0.4) or 1,
             Text = "",
             Size = dashboard and UDim2.fromOffset(44, 44) or UDim2.new(1, 0, 0, 34),
+            LayoutOrder = tabOrder,
             AutoButtonColor = false,
             Parent = tabButtons,
         })
@@ -1040,8 +1045,7 @@ function Prism:CreateWindow(opts)
         }), "IconBg")
         Corner(iconBg, UDim.new(0, dashboard and 8 or 5))
 
-        local iconImg, iconLbl = MountIconIn(iconBg, icon, isFirst, dashboard and 0.58 or 0.55)
-        if iconImg then Tag(iconImg, "AccentText") end
+        local _, iconLbl = MountEmoji(iconBg, icon, isFirst, dashboard)
         if iconLbl then Tag(iconLbl, "AccentText") end
 
         local titleLbl = Tag(Create("TextLabel", {
@@ -1064,7 +1068,6 @@ function Prism:CreateWindow(opts)
             Button = tabBtn,
             Stripe = tabStripe,
             Icon = iconLbl,
-            IconImage = iconImg,
             IconBg = iconBg,
             Title = titleLbl,
         }
@@ -1772,8 +1775,9 @@ function Prism:CreateWindow(opts)
             Tag(Stroke(grid, Theme.BorderLight, 1, 0.5), "BorderLight")
             Pad(grid, 10, 10, 10, 10)
 
+            local tileH = 72
             Create("UIGridLayout", {
-                CellSize = UDim2.new(0.5, -6, 0, 66),
+                CellSize = UDim2.new(0.5, -6, 0, tileH),
                 CellPadding = UDim2.new(0, 8, 0, 8),
                 FillDirectionMaxCells = 2,
                 SortOrder = Enum.SortOrder.LayoutOrder,
@@ -1799,53 +1803,59 @@ function Prism:CreateWindow(opts)
                     Tag(Create("Frame", {
                         BackgroundColor3 = glow,
                         BorderSizePixel = 0,
-                        Size = UDim2.new(0, 3, 1, -6),
-                        Position = UDim2.new(0, 0, 0, 3),
+                        Size = UDim2.new(0, 3, 1, -8),
+                        Position = UDim2.new(0, 0, 0, 4),
                         Parent = tile,
                     }), "Accent")
                 end
 
-                Pad(tile, 8, 10, 8, glow and 10 or 8)
+                local inner = Create("Frame", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    Position = UDim2.new(0, glow and 6 or 0, 0, 0),
+                    Parent = tile,
+                })
+                Pad(inner, 8, 8, 8, 8)
+                VList(inner, 2)
 
                 Tag(Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.FontBold,
                     Text = label,
                     TextColor3 = Theme.Text,
-                    TextSize = 13,
+                    TextSize = 12,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Size = UDim2.new(1, 0, 0, 16),
+                    Size = UDim2.new(1, 0, 0, 14),
                     LayoutOrder = 1,
-                    Parent = tile,
+                    Parent = inner,
                 }), "Text")
 
                 Tag(Create("TextLabel", {
                     BackgroundTransparency = 1,
-                    Font = Theme.FontLight,
+                    Font = Theme.FontBold,
                     Text = tostring(value),
-                    TextColor3 = Theme.TextDim,
-                    TextSize = 11,
-                    TextWrapped = true,
+                    TextColor3 = Theme.Text,
+                    TextSize = 15,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    Size = UDim2.new(1, 0, 0, 0),
+                    Size = UDim2.new(1, 0, 0, 18),
                     LayoutOrder = 2,
-                    Parent = tile,
-                }), "TextDim")
+                    Parent = inner,
+                }), "Text")
 
-                if hint then
-                    local hintLbl = Tag(Create("TextLabel", {
+                if hint and hint ~= "" then
+                    Tag(Create("TextLabel", {
                         BackgroundTransparency = 1,
                         Font = Theme.FontLight,
                         Text = hint,
                         TextColor3 = Theme.TextDim,
                         TextSize = 10,
-                        TextWrapped = true,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
                         TextXAlignment = Enum.TextXAlignment.Left,
-                        AutomaticSize = Enum.AutomaticSize.Y,
-                        Size = UDim2.new(1, 0, 0, 0),
+                        Size = UDim2.new(1, 0, 0, 12),
                         LayoutOrder = 3,
-                        Parent = tile,
+                        Parent = inner,
                     }), "TextDim")
                 end
             end
@@ -2010,16 +2020,16 @@ if Prism.LoadDemo then
     local Window = Prism:CreateWindow({
         Name = "Prism Hub",
         Subtitle = ".gg/prismui • demo",
-        Logo = I and I.Logo or "Logo",
+        Logo = "🔷",
         Style = "Dashboard",
         Size = Vector2.new(900, 560),
         Keybind = Enum.KeyCode.RightControl,
         NotifyOnLoad = true,
     })
 
-    local Home = Window:Tab("Home", I and I.Home or "⌂")
-    local Scripts = Window:Tab("Scripts", I and I.Code or "<>")
-    local Settings = Window:Tab("Settings", I and I.Settings or "⚙")
+    local Home = Window:Tab("Home", "🏠")
+    local Scripts = Window:Tab("Scripts", "📜")
+    local Settings = Window:Tab("Settings", "⚙️")
 
     Home:Hero("Hello, " .. LocalPlayer.Name, LocalPlayer.Name .. " • Prism Dashboard")
 
