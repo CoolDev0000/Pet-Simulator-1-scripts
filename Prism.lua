@@ -65,10 +65,17 @@ function Prism:EnsureIcons()
 
     local function runSource(src)
         local fn = loadstring(src)
+        if not fn and load then
+            fn = load(src, "@PrismIcons", "t", {})
+        end
         if not fn then
             return nil
         end
-        return fn()
+        local ok, result = pcall(fn)
+        if ok and type(result) == "table" and result.Resolve then
+            return result
+        end
+        return nil
     end
 
     local ok, icons = pcall(function()
@@ -96,49 +103,6 @@ end
 
 function Prism:LoadIcons(iconsModule)
     Prism.Icons = iconsModule
-end
-
-local function ResolveIcon(icon)
-    Prism:EnsureIcons()
-    if typeof(icon) == "number" and icon > 0 then
-        return icon, nil, true
-    end
-    if Prism.Icons and Prism.Icons.Resolve then
-        return Prism.Icons.Resolve(icon)
-    end
-    if typeof(icon) == "string" then
-        return 0, icon, false
-    end
-    return 0, "•", false
-end
-
-local function MountIconIn(parent, icon, active, sizeScale)
-    local assetId, text, isImage = ResolveIcon(icon)
-    sizeScale = sizeScale or 0.55
-    if isImage and assetId > 0 then
-        local img = Create("ImageLabel", {
-            Name = "IconImage",
-            BackgroundTransparency = 1,
-            Image = "rbxassetid://" .. tostring(assetId),
-            ImageColor3 = active and Theme.Text or Theme.TextDim,
-            ScaleType = Enum.ScaleType.Fit,
-            Size = UDim2.fromScale(sizeScale, sizeScale),
-            Position = UDim2.fromScale((1 - sizeScale) / 2, (1 - sizeScale) / 2),
-            Parent = parent,
-        })
-        return img, nil, true
-    end
-    local lbl = Create("TextLabel", {
-        Name = "Icon",
-        BackgroundTransparency = 1,
-        Font = Theme.FontBold,
-        Text = text or "•",
-        TextColor3 = active and Theme.Accent or Theme.TextDim,
-        TextSize = 14,
-        Size = UDim2.fromScale(1, 1),
-        Parent = parent,
-    })
-    return nil, lbl, false
 end
 
 Prism.Presets = {
@@ -287,6 +251,58 @@ end
 local function Tag(inst, role)
     if inst then inst:SetAttribute("PrismTheme", role) end
     return inst
+end
+
+local function UDim2Fill(scale)
+    local s = scale or 1
+    local o = math.floor((1 - s) * 50)
+    return UDim2.new(s, 0, s, 0), UDim2.new((1 - s) / 2, o, (1 - s) / 2, o)
+end
+
+local function ResolveIcon(icon)
+    Prism:EnsureIcons()
+    if typeof(icon) == "number" and icon > 0 then
+        return icon, nil, true
+    end
+    if Prism.Icons and type(Prism.Icons.Resolve) == "function" then
+        return Prism.Icons.Resolve(icon)
+    end
+    if typeof(icon) == "string" then
+        return 0, icon, false
+    end
+    return 0, "•", false
+end
+
+local function MountIconIn(parent, icon, active, sizeScale)
+    local assetId, text, isImage = ResolveIcon(icon)
+    sizeScale = sizeScale or 0.55
+    local fillSize, fillPos = UDim2Fill(sizeScale)
+
+    if isImage and assetId > 0 then
+        local img = Create("ImageLabel", {
+            Name = "IconImage",
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://" .. tostring(assetId),
+            ImageColor3 = active and Theme.Text or Theme.TextDim,
+            ScaleType = Enum.ScaleType.Fit,
+            Size = fillSize,
+            Position = fillPos,
+            Parent = parent,
+        })
+        return img, nil, true
+    end
+
+    local lbl = Create("TextLabel", {
+        Name = "Icon",
+        BackgroundTransparency = 1,
+        Font = Theme.FontBold,
+        Text = text or "•",
+        TextColor3 = active and Theme.Accent or Theme.TextDim,
+        TextSize = 14,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = parent,
+    })
+    return nil, lbl, false
 end
 
 local function ApplyAccentGradient(g)
@@ -1976,4 +1992,3 @@ task.defer(function()
 end)
 
 return Prism
-
