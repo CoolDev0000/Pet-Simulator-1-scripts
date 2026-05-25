@@ -22,6 +22,17 @@ local function Protect(gui)
     if gethui then gui.Parent = gethui() end
 end
 
+local typeOf = typeof or type
+
+local function Create(class, props)
+    local inst = Instance.new(class)
+    for k, v in pairs(props or {}) do
+        if k ~= "Parent" then inst[k] = v end
+    end
+    if props and props.Parent then inst.Parent = props.Parent end
+    return inst
+end
+
 local Theme = {
     Background = Color3.fromRGB(11, 12, 16),
     Surface = Color3.fromRGB(16, 17, 23),
@@ -50,8 +61,57 @@ local Theme = {
     TweenOpen = TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 }
 
+local BuiltinIcons = {
+    Ids = {
+        Logo = 129159931459891,
+        Home = 124054948741946,
+        Code = 101391085553696,
+        Settings = 86014294956636,
+        Themes = 128075735564797,
+        Help = 79592888732779,
+        User = 80217218300928,
+        Bell = 135374572541868,
+        Star = 133417372199798,
+        Map = 95598851353269,
+        Discord = 76737711111847,
+        Wave = 117470944830637,
+        Scripts = 0,
+        Friends = 0,
+        Server = 0,
+    },
+    Text = {
+        Logo = "◐", Home = "⌂", Code = "<>", Settings = "⚙", Themes = "◎",
+        Help = "?", User = "👤", Bell = "🔔", Star = "★", Map = "⌖",
+        Discord = "💬", Wave = "⚡", Scripts = "<>", Friends = "♥", Server = "▣",
+    },
+}
+
+function BuiltinIcons.Resolve(icon)
+    if typeOf(icon) == "number" and icon > 0 then
+        return icon, nil, true
+    end
+    if typeOf(icon) ~= "string" then
+        return 0, "•", false
+    end
+    local id = BuiltinIcons.Ids[icon]
+    if typeOf(id) == "number" and id > 0 then
+        return id, BuiltinIcons.Text[icon], true
+    end
+    return 0, BuiltinIcons.Text[icon] or icon, false
+end
+
+setmetatable(BuiltinIcons, {
+    __index = function(_, key)
+        if BuiltinIcons.Ids[key] ~= nil or BuiltinIcons.Text[key] then
+            return key
+        end
+        return nil
+    end,
+})
+
 local Prism = {}
-Prism.Version = "2.0.0"
+Prism.Version = "2.0.1"
+Prism.Build = 3
 Prism.Theme = Theme
 Prism.LoadDemo = true
 Prism.Icons = nil
@@ -72,7 +132,7 @@ function Prism:EnsureIcons()
             return nil
         end
         local ok, result = pcall(fn)
-        if ok and type(result) == "table" and result.Resolve then
+        if ok and type(result) == "table" and type(result.Resolve) == "function" then
             return result
         end
         return nil
@@ -97,8 +157,8 @@ function Prism:EnsureIcons()
         end
     end
 
-    warn("[PrismUI] Icons not loaded (HttpGet + local fallback failed)")
-    return nil
+    Prism.Icons = BuiltinIcons
+    return BuiltinIcons
 end
 
 function Prism:LoadIcons(iconsModule)
@@ -183,15 +243,6 @@ local function Tween(obj, props, info)
     return TweenService:Create(obj, info or Theme.TweenMed, props)
 end
 
-local function Create(class, props)
-    local inst = Instance.new(class)
-    for k, v in pairs(props or {}) do
-        if k ~= "Parent" then inst[k] = v end
-    end
-    if props and props.Parent then inst.Parent = props.Parent end
-    return inst
-end
-
 local function Corner(parent, radius)
     return Create("UICorner", { CornerRadius = radius or Theme.Corner, Parent = parent })
 end
@@ -253,21 +304,15 @@ local function Tag(inst, role)
     return inst
 end
 
-local function UDim2Fill(scale)
-    local s = scale or 1
-    local o = math.floor((1 - s) * 50)
-    return UDim2.new(s, 0, s, 0), UDim2.new((1 - s) / 2, o, (1 - s) / 2, o)
-end
-
 local function ResolveIcon(icon)
     Prism:EnsureIcons()
-    if typeof(icon) == "number" and icon > 0 then
+    if typeOf(icon) == "number" and icon > 0 then
         return icon, nil, true
     end
     if Prism.Icons and type(Prism.Icons.Resolve) == "function" then
         return Prism.Icons.Resolve(icon)
     end
-    if typeof(icon) == "string" then
+    if typeOf(icon) == "string" then
         return 0, icon, false
     end
     return 0, "•", false
@@ -276,32 +321,32 @@ end
 local function MountIconIn(parent, icon, active, sizeScale)
     local assetId, text, isImage = ResolveIcon(icon)
     sizeScale = sizeScale or 0.55
-    local fillSize, fillPos = UDim2Fill(sizeScale)
+    local half = (1 - sizeScale) / 2
 
-    if isImage and assetId > 0 then
-        local img = Create("ImageLabel", {
-            Name = "IconImage",
-            BackgroundTransparency = 1,
-            Image = "rbxassetid://" .. tostring(assetId),
-            ImageColor3 = active and Theme.Text or Theme.TextDim,
-            ScaleType = Enum.ScaleType.Fit,
-            Size = fillSize,
-            Position = fillPos,
-            Parent = parent,
-        })
+    if isImage and assetId and assetId > 0 then
+        local img = Instance.new("ImageLabel")
+        img.Name = "IconImage"
+        img.BackgroundTransparency = 1
+        img.Image = "rbxassetid://" .. tostring(assetId)
+        img.ImageColor3 = active and Theme.Text or Theme.TextDim
+        if Enum.ScaleType and Enum.ScaleType.Fit then
+            img.ScaleType = Enum.ScaleType.Fit
+        end
+        img.Size = UDim2.new(sizeScale, 0, sizeScale, 0)
+        img.Position = UDim2.new(half, 0, half, 0)
+        img.Parent = parent
         return img, nil, true
     end
 
-    local lbl = Create("TextLabel", {
-        Name = "Icon",
-        BackgroundTransparency = 1,
-        Font = Theme.FontBold,
-        Text = text or "•",
-        TextColor3 = active and Theme.Accent or Theme.TextDim,
-        TextSize = 14,
-        Size = UDim2.new(1, 0, 1, 0),
-        Parent = parent,
-    })
+    local lbl = Instance.new("TextLabel")
+    lbl.Name = "Icon"
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Theme.FontBold
+    lbl.Text = text or "•"
+    lbl.TextColor3 = active and Theme.Accent or Theme.TextDim
+    lbl.TextSize = 14
+    lbl.Size = UDim2.new(1, 0, 1, 0)
+    lbl.Parent = parent
     return nil, lbl, false
 end
 
