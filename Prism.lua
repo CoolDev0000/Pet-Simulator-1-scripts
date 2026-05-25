@@ -1,5 +1,6 @@
 --[[
-    PrismUI v1.3.1 — polished GUI library (single file)
+    PrismUI v2.0 — dashboard-style GUI library (single file)
+    Style: CreateWindow({ Style = "Dashboard" }) — icon sidebar + cards
 ]]
 
 local Players = game:GetService("Players")
@@ -22,10 +23,10 @@ local function Protect(gui)
 end
 
 local Theme = {
-    Background = Color3.fromRGB(8, 8, 14),
-    Surface = Color3.fromRGB(14, 14, 22),
-    SurfaceHover = Color3.fromRGB(22, 22, 34),
-    Card = Color3.fromRGB(18, 18, 28),
+    Background = Color3.fromRGB(11, 12, 16),
+    Surface = Color3.fromRGB(16, 17, 23),
+    SurfaceHover = Color3.fromRGB(24, 26, 34),
+    Card = Color3.fromRGB(19, 20, 28),
     CardHover = Color3.fromRGB(26, 26, 40),
     Border = Color3.fromRGB(36, 36, 54),
     BorderLight = Color3.fromRGB(55, 55, 78),
@@ -50,7 +51,7 @@ local Theme = {
 }
 
 local Prism = {}
-Prism.Version = "1.3.1"
+Prism.Version = "2.0.0"
 Prism.Theme = Theme
 Prism.LoadDemo = true
 
@@ -109,6 +110,17 @@ Prism.Presets = {
         Accent = Color3.fromRGB(255, 105, 130),
         Accent2 = Color3.fromRGB(255, 160, 90),
         ToggleOff = Color3.fromRGB(52, 34, 40),
+    },
+    Hidden = {
+        Background = Color3.fromRGB(10, 11, 15),
+        Surface = Color3.fromRGB(15, 16, 22),
+        SurfaceHover = Color3.fromRGB(22, 24, 32),
+        Card = Color3.fromRGB(18, 19, 27),
+        Border = Color3.fromRGB(32, 34, 46),
+        BorderLight = Color3.fromRGB(48, 50, 66),
+        Accent = Color3.fromRGB(72, 162, 255),
+        Accent2 = Color3.fromRGB(120, 200, 255),
+        ToggleOff = Color3.fromRGB(38, 40, 54),
     },
 }
 
@@ -491,9 +503,11 @@ function Prism:CreateWindow(opts)
     opts = opts or {}
     local title = opts.Name or "Prism UI"
     local subtitle = opts.Subtitle or ""
-    local winSize = opts.Size or Vector2.new(720, 460)
+    local winSize = opts.Size or Vector2.new(900, 560)
     local toggleKey = opts.Keybind or Enum.KeyCode.RightControl
     local notifyOnLoad = opts.NotifyOnLoad == true
+    local dashboard = (opts.Style or "Dashboard") ~= "Classic"
+    local logoIcon = opts.Logo or "◐"
 
     GetRoot()
     Prism.Windows = Prism.Windows or {}
@@ -525,7 +539,7 @@ function Prism:CreateWindow(opts)
         ClipsDescendants = true,
         Parent = RootGui,
     }), "Background")
-    Corner(win, UDim.new(0, 12))
+    Corner(win, UDim.new(0, dashboard and 14 or 12))
     Tag(Stroke(win, Theme.BorderLight, 1, 0.55), "BorderLight")
 
     shadow.Position = UDim2.new(
@@ -533,50 +547,72 @@ function Prism:CreateWindow(opts)
         win.Position.Y.Scale, win.Position.Y.Offset - 10
     )
 
-    local WIN_PAD = 12
-    local HEADER_H = 44
-    local SIDEBAR_W = 108
-    local SIDEBAR_GAP = 8
+    local WIN_PAD = dashboard and 14 or 12
+    local HEADER_H = dashboard and 50 or 44
+    local SIDEBAR_W = dashboard and 58 or 108
+    local SIDEBAR_GAP = dashboard and 10 or 8
 
-    -- Header (fills top, clipped by window corners)
     local header = Tag(Create("Frame", {
         Name = "Header",
         BackgroundColor3 = Theme.Background,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, HEADER_H),
-        Position = UDim2.new(0, 0, 0, 0),
         Parent = win,
     }), "Background")
 
-    local accentBar = Tag(Create("Frame", {
-        BorderSizePixel = 0,
-        BackgroundColor3 = Theme.Accent,
-        Size = UDim2.new(1, -(WIN_PAD * 2), 0, 2),
-        Position = UDim2.new(0, WIN_PAD, 0, 0),
-        Parent = header,
-    }), "Accent")
-    Gradient(accentBar, Theme.Accent, Theme.Accent2, 0)
+    if not dashboard then
+        local accentBar = Tag(Create("Frame", {
+            BorderSizePixel = 0,
+            BackgroundColor3 = Theme.Accent,
+            Size = UDim2.new(1, -(WIN_PAD * 2), 0, 2),
+            Position = UDim2.new(0, WIN_PAD, 0, 0),
+            Parent = header,
+        }), "Accent")
+        Gradient(accentBar, Theme.Accent, Theme.Accent2, 0)
+    end
 
     local titleBar = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, -3),
-        Position = UDim2.new(0, 0, 0, 3),
+        Size = UDim2.new(1, 0, 1, 0),
         Parent = header,
     })
 
     Tag(Create("Frame", {
         BackgroundColor3 = Theme.Border,
-        BackgroundTransparency = 0.35,
+        BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, -(WIN_PAD * 2), 0, 1),
         Position = UDim2.new(0, WIN_PAD, 1, 0),
         Parent = header,
     }), "Divider")
 
+    local logoOffset = 0
+    if dashboard then
+        local logoBox = Tag(Create("Frame", {
+            Size = UDim2.fromOffset(34, 34),
+            Position = UDim2.new(0, WIN_PAD, 0.5, -17),
+            BackgroundColor3 = Theme.Accent,
+            Parent = titleBar,
+        }), "Accent")
+        Corner(logoBox, UDim.new(0, 10))
+        Gradient(logoBox, Theme.Accent, Theme.Accent2, 35)
+        Tag(Stroke(logoBox, Theme.Accent2, 1, 0.5), "BorderLight")
+        Create("TextLabel", {
+            BackgroundTransparency = 1,
+            Text = logoIcon,
+            Font = Theme.FontBold,
+            TextColor3 = Theme.Text,
+            TextSize = 16,
+            Size = UDim2.fromScale(1, 1),
+            Parent = logoBox,
+        })
+        logoOffset = 42
+    end
+
     local titleBlock = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -92, 1, 0),
-        Position = UDim2.new(0, WIN_PAD + 4, 0, 5),
+        Size = UDim2.new(1, -100, 1, 0),
+        Position = UDim2.new(0, WIN_PAD + logoOffset, 0, dashboard and 8 or 5),
         Parent = titleBar,
     })
     VList(titleBlock, 1)
@@ -654,32 +690,56 @@ function Prism:CreateWindow(opts)
 
     local sidebar = Tag(Create("Frame", {
         BackgroundColor3 = Theme.Surface,
-        BackgroundTransparency = 0,
+        BackgroundTransparency = dashboard and 0.25 or 0,
         Size = UDim2.new(0, SIDEBAR_W, 1, 0),
         Parent = body,
     }), "Surface")
-    Corner(sidebar, UDim.new(0, 8))
-    Pad(sidebar, 8, 6, 8, 6)
+    Corner(sidebar, UDim.new(0, dashboard and 10 or 8))
+    Pad(sidebar, dashboard and 10 or 8, 6, dashboard and 10 or 8, 6)
 
-    Tag(Create("TextLabel", {
-        BackgroundTransparency = 1,
-        Font = Theme.FontBold,
-        Text = "MENU",
-        TextColor3 = Theme.TextDim,
-        TextSize = 9,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Size = UDim2.new(1, 0, 0, 12),
-        Position = UDim2.new(0, 2, 0, 0),
-        Parent = sidebar,
-    }), "TextDim")
+    if not dashboard then
+        Tag(Create("TextLabel", {
+            BackgroundTransparency = 1,
+            Font = Theme.FontBold,
+            Text = "MENU",
+            TextColor3 = Theme.TextDim,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Size = UDim2.new(1, 0, 0, 12),
+            Position = UDim2.new(0, 2, 0, 0),
+            Parent = sidebar,
+        }), "TextDim")
+    end
 
     local tabButtons = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, -18),
-        Position = UDim2.new(0, 0, 0, 16),
+        Size = UDim2.new(1, 0, 1, dashboard and -52 or -18),
+        Position = UDim2.new(0, 0, 0, dashboard and 0 or 16),
         Parent = sidebar,
     })
-    VList(tabButtons, 4)
+    VList(tabButtons, dashboard and 8 or 4)
+
+    if dashboard then
+        local avatar = Create("ImageLabel", {
+            BackgroundColor3 = Theme.Card,
+            Size = UDim2.fromOffset(36, 36),
+            Position = UDim2.new(0.5, -18, 1, -40),
+            Image = "",
+            Parent = sidebar,
+        })
+        Corner(avatar, UDim.new(0, 10))
+        Tag(Stroke(avatar, Theme.BorderLight, 1, 0.4), "BorderLight")
+        task.spawn(function()
+            local ok, img = pcall(function()
+                return Players:GetUserThumbnailAsync(
+                    LocalPlayer.UserId,
+                    Enum.ThumbnailType.HeadShot,
+                    Enum.ThumbnailSize.Size48x48
+                )
+            end)
+            if ok and avatar.Parent then avatar.Image = img end
+        end)
+    end
 
     Tag(Create("Frame", {
         Name = "Divider",
@@ -692,14 +752,14 @@ function Prism:CreateWindow(opts)
     }), "Divider")
 
     local content = Tag(Create("Frame", {
-        BackgroundColor3 = Theme.Card,
-        BackgroundTransparency = 0.35,
+        BackgroundColor3 = dashboard and Theme.Background or Theme.Card,
+        BackgroundTransparency = dashboard and 0 or 0.35,
         Size = UDim2.new(1, -(SIDEBAR_W + SIDEBAR_GAP + 1), 1, 0),
         Position = UDim2.new(0, SIDEBAR_W + SIDEBAR_GAP + 1, 0, 0),
         ClipsDescendants = true,
         Parent = body,
-    }), "Card")
-    Corner(content, UDim.new(0, 8))
+    }), dashboard and "Background" or "Card")
+    Corner(content, UDim.new(0, dashboard and 10 or 8))
 
     local pagesHost = Create("Frame", {
         BackgroundTransparency = 1,
@@ -711,19 +771,31 @@ function Prism:CreateWindow(opts)
     local function SelectTab(data)
         for _, t in ipairs(tabs) do
             t.Page.Visible = false
-            Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
-            Tween(t.Title, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
-            Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
-            Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
-            if t.Stripe then t.Stripe.Visible = false end
+            if dashboard then
+                Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
+                Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
+                Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+            else
+                Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
+                Tween(t.Title, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+                Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
+                Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+                if t.Stripe then t.Stripe.Visible = false end
+            end
         end
         data.Page.Visible = true
         activeTab = data
-        Tween(data.Button, { BackgroundTransparency = 0 }, Theme.TweenFast):Play()
-        Tween(data.Title, { TextColor3 = Theme.Text }, Theme.TweenFast):Play()
-        Tween(data.IconBg, { BackgroundTransparency = 0.5 }, Theme.TweenFast):Play()
-        Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
-        if data.Stripe then data.Stripe.Visible = true end
+        if dashboard then
+            Tween(data.Button, { BackgroundTransparency = 0.35 }, Theme.TweenFast):Play()
+            Tween(data.IconBg, { BackgroundTransparency = 0.45 }, Theme.TweenFast):Play()
+            Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
+        else
+            Tween(data.Button, { BackgroundTransparency = 0 }, Theme.TweenFast):Play()
+            Tween(data.Title, { TextColor3 = Theme.Text }, Theme.TweenFast):Play()
+            Tween(data.IconBg, { BackgroundTransparency = 0.5 }, Theme.TweenFast):Play()
+            Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
+            if data.Stripe then data.Stripe.Visible = true end
+        end
     end
 
     local window = { _Win = win, _Shadow = shadow }
@@ -757,7 +829,7 @@ function Prism:CreateWindow(opts)
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             Parent = page,
         }), "ScrollBar")
-        Pad(pageScroll, 14, 14, 14, 14)
+        Pad(pageScroll, dashboard and 16 or 14, dashboard and 16 or 14, dashboard and 16 or 14, dashboard and 16 or 14)
 
         local pageContent = Create("Frame", {
             BackgroundTransparency = 1,
@@ -765,35 +837,38 @@ function Prism:CreateWindow(opts)
             AutomaticSize = Enum.AutomaticSize.Y,
             Parent = pageScroll,
         })
-        VList(pageContent, 16)
+        VList(pageContent, dashboard and 14 or 16)
 
         local isFirst = #tabs == 0
         local tabBtn = Create("TextButton", {
             BackgroundColor3 = Theme.Card,
-            BackgroundTransparency = isFirst and 0.4 or 1,
+            BackgroundTransparency = isFirst and (dashboard and 0.35 or 0.4) or 1,
             Text = "",
-            Size = UDim2.new(1, 0, 0, 34),
+            Size = dashboard and UDim2.fromOffset(44, 44) or UDim2.new(1, 0, 0, 34),
             AutoButtonColor = false,
             Parent = tabButtons,
         })
-        Corner(tabBtn, UDim.new(0, 6))
+        Corner(tabBtn, UDim.new(0, dashboard and 10 or 6))
 
-        local tabStripe = Tag(Create("Frame", {
-            Name = "TabStripe",
-            BackgroundColor3 = Theme.Accent,
-            BorderSizePixel = 0,
-            Size = UDim2.new(0, 2, 0.65, 0),
-            AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 1, 0.5, 0),
-            Visible = isFirst,
-            ZIndex = 6,
-            Parent = tabBtn,
-        }), "TabIndicator")
-        Corner(tabStripe, UDim.new(0, 1))
+        local tabStripe = nil
+        if not dashboard then
+            tabStripe = Tag(Create("Frame", {
+                Name = "TabStripe",
+                BackgroundColor3 = Theme.Accent,
+                BorderSizePixel = 0,
+                Size = UDim2.new(0, 2, 0.65, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.new(0, 1, 0.5, 0),
+                Visible = isFirst,
+                ZIndex = 6,
+                Parent = tabBtn,
+            }), "TabIndicator")
+            Corner(tabStripe, UDim.new(0, 1))
+        end
 
         tabBtn.MouseEnter:Connect(function()
             if activeTab and activeTab.Button == tabBtn then return end
-            Tween(tabBtn, { BackgroundTransparency = 0.55 }, Theme.TweenFast):Play()
+            Tween(tabBtn, { BackgroundTransparency = dashboard and 0.5 or 0.55 }, Theme.TweenFast):Play()
         end)
         tabBtn.MouseLeave:Connect(function()
             if activeTab and activeTab.Button == tabBtn then return end
@@ -802,20 +877,20 @@ function Prism:CreateWindow(opts)
 
         local tabInner = Create("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -10, 1, 0),
-            Position = UDim2.new(0, 8, 0, 0),
+            Size = dashboard and UDim2.fromScale(1, 1) or UDim2.new(1, -10, 1, 0),
+            Position = dashboard and UDim2.fromOffset(0, 0) or UDim2.new(0, 8, 0, 0),
             Parent = tabBtn,
         })
-        HList(tabInner, 6, Enum.VerticalAlignment.Center)
 
         local iconBg = Tag(Create("Frame", {
             BackgroundColor3 = Theme.Accent,
-            BackgroundTransparency = isFirst and 0.8 or 1,
-            Size = UDim2.fromOffset(22, 22),
-            LayoutOrder = 1,
+            BackgroundTransparency = isFirst and (dashboard and 0.45 or 0.8) or 1,
+            Size = dashboard and UDim2.fromOffset(32, 32) or UDim2.fromOffset(22, 22),
+            AnchorPoint = dashboard and Vector2.new(0.5, 0.5) or nil,
+            Position = dashboard and UDim2.fromScale(0.5, 0.5) or nil,
             Parent = tabInner,
         }), "IconBg")
-        Corner(iconBg, UDim.new(0, 5))
+        Corner(iconBg, UDim.new(0, dashboard and 8 or 5))
 
         local iconLbl = Tag(Create("TextLabel", {
             Name = "Icon",
@@ -823,7 +898,7 @@ function Prism:CreateWindow(opts)
             Font = Theme.FontBold,
             Text = icon,
             TextColor3 = isFirst and Theme.Accent or Theme.TextDim,
-            TextSize = 12,
+            TextSize = dashboard and 15 or 12,
             Size = UDim2.fromScale(1, 1),
             Parent = iconBg,
         }), "AccentText")
@@ -838,7 +913,7 @@ function Prism:CreateWindow(opts)
             TextXAlignment = Enum.TextXAlignment.Left,
             TextTruncate = Enum.TextTruncate.AtEnd,
             Size = UDim2.new(1, -30, 0, 18),
-            LayoutOrder = 2,
+            Visible = not dashboard,
             Parent = tabInner,
         }), isFirst and "Text" or "TextDim")
 
@@ -1452,6 +1527,242 @@ function Prism:CreateWindow(opts)
             return api
         end
 
+        function tabAPI:Hero(title, subtitle)
+            local card = Tag(Create("Frame", {
+                BackgroundColor3 = Theme.Card,
+                Size = UDim2.new(1, 0, 0, 78),
+                Parent = pageContent,
+            }), "Card")
+            Corner(card, UDim.new(0, 10))
+            Tag(Stroke(card, Theme.BorderLight, 1, 0.55), "BorderLight")
+
+            local av = Create("ImageLabel", {
+                BackgroundColor3 = Theme.Surface,
+                Size = UDim2.fromOffset(50, 50),
+                Position = UDim2.new(0, 14, 0.5, -25),
+                Image = "",
+                Parent = card,
+            })
+            Corner(av, UDim.new(0, 10))
+            Tag(Stroke(av, Theme.BorderLight, 1, 0.35), "BorderLight")
+            task.spawn(function()
+                local ok, img = pcall(function()
+                    return Players:GetUserThumbnailAsync(
+                        LocalPlayer.UserId,
+                        Enum.ThumbnailType.HeadShot,
+                        Enum.ThumbnailSize.Size48x48
+                    )
+                end)
+                if ok and av.Parent then av.Image = img end
+            end)
+
+            Tag(Create("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Theme.FontBold,
+                Text = title,
+                TextColor3 = Theme.Text,
+                TextSize = 20,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, -84, 0, 26),
+                Position = UDim2.new(0, 76, 0, 14),
+                Parent = card,
+            }), "Text")
+
+            Tag(Create("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Theme.FontLight,
+                Text = subtitle,
+                TextColor3 = Theme.TextDim,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextWrapped = true,
+                Size = UDim2.new(1, -84, 0, 36),
+                Position = UDim2.new(0, 76, 0, 38),
+                Parent = card,
+            }), "TextDim")
+        end
+
+        function tabAPI:Panel(panelTitle, panelDesc)
+            local wrap = Create("Frame", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                Parent = pageContent,
+            })
+            VList(wrap, 10)
+
+            Tag(Create("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Theme.FontBold,
+                Text = panelTitle,
+                TextColor3 = Theme.Text,
+                TextSize = 16,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, 0, 0, 20),
+                LayoutOrder = 1,
+                Parent = wrap,
+            }), "Text")
+
+            if panelDesc and panelDesc ~= "" then
+                Tag(Create("TextLabel", {
+                    BackgroundTransparency = 1,
+                    Font = Theme.FontLight,
+                    Text = panelDesc,
+                    TextColor3 = Theme.TextDim,
+                    TextSize = 12,
+                    TextWrapped = true,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    LayoutOrder = 2,
+                    Parent = wrap,
+                }), "TextDim")
+            end
+
+            local grid = Tag(Create("Frame", {
+                BackgroundColor3 = Theme.Card,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                LayoutOrder = 3,
+                Parent = wrap,
+            }), "Card")
+            Corner(grid, UDim.new(0, 10))
+            Tag(Stroke(grid, Theme.BorderLight, 1, 0.5), "BorderLight")
+            Pad(grid, 10, 10, 10, 10)
+
+            Create("UIGridLayout", {
+                CellSize = UDim2.new(0.5, -6, 0, 66),
+                CellPadding = UDim2.new(0, 8, 0, 8),
+                FillDirectionMaxCells = 2,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Parent = grid,
+            })
+
+            local panelAPI = {}
+            local tileOrder = 0
+
+            function panelAPI:Tile(label, value, hint, glow)
+                tileOrder += 1
+                local tile = Tag(Create("Frame", {
+                    BackgroundColor3 = Theme.Surface,
+                    BackgroundTransparency = 0.2,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    ClipsDescendants = true,
+                    LayoutOrder = tileOrder,
+                    Parent = grid,
+                }), "Surface")
+                Corner(tile, UDim.new(0, 8))
+
+                if glow then
+                    Tag(Create("Frame", {
+                        BackgroundColor3 = glow,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(0, 3, 1, -6),
+                        Position = UDim2.new(0, 0, 0, 3),
+                        Parent = tile,
+                    }), "Accent")
+                end
+
+                Pad(tile, 8, 10, 8, glow and 10 or 8)
+
+                Tag(Create("TextLabel", {
+                    BackgroundTransparency = 1,
+                    Font = Theme.FontBold,
+                    Text = label,
+                    TextColor3 = Theme.Text,
+                    TextSize = 13,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Size = UDim2.new(1, 0, 0, 16),
+                    LayoutOrder = 1,
+                    Parent = tile,
+                }), "Text")
+
+                Tag(Create("TextLabel", {
+                    BackgroundTransparency = 1,
+                    Font = Theme.FontLight,
+                    Text = tostring(value),
+                    TextColor3 = Theme.TextDim,
+                    TextSize = 11,
+                    TextWrapped = true,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    LayoutOrder = 2,
+                    Parent = tile,
+                }), "TextDim")
+
+                if hint then
+                    local hintLbl = Tag(Create("TextLabel", {
+                        BackgroundTransparency = 1,
+                        Font = Theme.FontLight,
+                        Text = hint,
+                        TextColor3 = Theme.TextDim,
+                        TextSize = 10,
+                        TextWrapped = true,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Size = UDim2.new(1, 0, 0, 0),
+                        LayoutOrder = 3,
+                        Parent = tile,
+                    }), "TextDim")
+                end
+            end
+
+            return panelAPI
+        end
+
+        function tabAPI:Banner(title, desc, color1, color2, callback)
+            local b = Tag(Create("TextButton", {
+                BackgroundColor3 = color1 or Theme.Accent,
+                Text = "",
+                Size = UDim2.new(1, 0, 0, 76),
+                AutoButtonColor = false,
+                Parent = pageContent,
+            }), "ButtonPrimary")
+            Corner(b, UDim.new(0, 10))
+            Gradient(b, color1 or Theme.Accent, color2 or Theme.Accent2, 25)
+            if callback then Ripple(b) end
+
+            local inner = Create("Frame", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Parent = b,
+            })
+            Pad(inner, 14, 16, 14, 16)
+            VList(inner, 4)
+
+            Tag(Create("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Theme.FontBold,
+                Text = title,
+                TextColor3 = Theme.Text,
+                TextSize = 16,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, 0, 0, 20),
+                LayoutOrder = 1,
+                Parent = inner,
+            }), "Text")
+
+            Tag(Create("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Theme.FontLight,
+                Text = desc,
+                TextColor3 = Theme.Text,
+                TextTransparency = 0.15,
+                TextSize = 12,
+                TextWrapped = true,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                AutomaticSize = Enum.AutomaticSize.Y,
+                Size = UDim2.new(1, 0, 0, 0),
+                LayoutOrder = 2,
+                Parent = inner,
+            }), "Text")
+
+            if callback then
+                b.MouseButton1Click:Connect(function() callback() end)
+            end
+        end
+
         return tabAPI
     end
 
@@ -1530,52 +1841,51 @@ function Prism:CreateWindow(opts)
 end
 
 if Prism.LoadDemo then
+    Prism:SetTheme("Hidden")
+
     local Window = Prism:CreateWindow({
-        Name = "Prism UI",
-        Subtitle = "v" .. Prism.Version,
-        Size = Vector2.new(720, 460),
+        Name = "Prism Hub",
+        Subtitle = ".gg/prismui • demo",
+        Logo = "◐",
+        Style = "Dashboard",
+        Size = Vector2.new(900, 560),
         Keybind = Enum.KeyCode.RightControl,
         NotifyOnLoad = true,
     })
 
-    local Main = Window:Tab("Main", ">")
-    local Settings = Window:Tab("Settings", "*")
-    local About = Window:Tab("About", "?")
+    local Home = Window:Tab("Home", "⌂")
+    local Scripts = Window:Tab("Scripts", "<>")
+    local Settings = Window:Tab("Settings", "⚙")
 
-    local Combat = Main:Section("Combat")
-    Combat:Toggle("Auto Attack", false, function(v)
-        Prism:Notify({ Title = "Auto Attack", Content = v and "ON" or "OFF", Type = v and "Success" or "Info" })
-    end)
-    Combat:Slider("Attack Range", 10, 100, 50, function() end)
-    Combat:Dropdown("Target", { "Nearest", "Lowest HP", "Random" }, "Nearest", function() end)
+    Home:Hero("Hello, " .. LocalPlayer.Name, LocalPlayer.Name .. " • Prism Dashboard")
 
-    local Move = Main:Section("Movement")
-    Move:Toggle("Speed Boost", false, function() end)
-    Move:Slider("Walk Speed", 16, 200, 16, function() end)
-    Move:Keybind("Fly Key", Enum.KeyCode.F, function() end)
+    local Server = Home:Panel("Server", "Information on the session you're currently in.")
+    Server:Tile("Players", "12", "playing")
+    Server:Tile("Max Players", "15", "server cap")
+    Server:Tile("Latency", "80ms", "ping")
+    Server:Tile("Region", "US", "server region")
+    Server:Tile("Session", "00:05:12", "in server for", Theme.Success)
+    Server:Tile("Join Script", "Tap to copy", "click to copy", Theme.Accent)
 
-    local Vis = Main:Section("Visuals")
-    Vis:ColorPicker("ESP Color", Color3.fromRGB(108, 92, 231), function() end)
-    Vis:Toggle("Fullbright", false, function() end)
-
-    local Act = Main:Section("Actions")
-    Act:Button("Test Notify", function()
-        Prism:Notify({ Title = "Hello", Content = "Prism UI v" .. Prism.Version, Type = "Info" })
+    Home:Banner("Discord", "Tap to join the Discord server", Color3.fromRGB(88, 101, 242), Color3.fromRGB(155, 89, 182), function()
+        Prism:Notify({ Title = "Discord", Content = "Link copied (demo)", Type = "Info" })
     end)
 
-    local Cfg = Settings:Section("Config")
-    Cfg:Input("Username", "Enter name...", function(t)
-        Prism:Notify({ Title = "Input", Content = t, Type = "Info" })
-    end)
-    Cfg:Dropdown("Theme", { "Default", "Midnight", "Amethyst", "Emerald", "Rose" }, "Default", function(v)
+    local Friends = Home:Panel("Friends", "What your friends are doing.")
+    Friends:Tile("In Server", "0", "no friends in game")
+    Friends:Tile("Offline", "28", "friends")
+    Friends:Tile("Online", "2", "friends online", Theme.Warning)
+    Friends:Tile("All", "100", "total friends")
+
+    Scripts:Panel("Scripts", "Quick actions"):Tile("Auto Farm", "Off", "toggle in settings")
+    Scripts:Banner("Wave", "Your executor supports this script.", Color3.fromRGB(180, 40, 50), Color3.fromRGB(40, 10, 14))
+
+    local Cfg = Settings:Section("Settings")
+    Cfg:Dropdown("Theme", { "Hidden", "Default", "Midnight", "Amethyst", "Emerald", "Rose" }, "Hidden", function(v)
         Prism:SetTheme(v)
-        Prism:Notify({ Title = "Theme", Content = v .. " applied", Type = "Success", Duration = 2 })
     end)
-
-    local Info = About:Section("Info")
-    Info:Label("PrismUI v" .. Prism.Version)
-    Info:Label("Polished layout, floating dropdowns, shadows.")
-    Info:Button("Destroy UI", function() Prism:Destroy() end)
+    Cfg:Toggle("Notifications", true, function() end)
+    Cfg:Button("Destroy UI", function() Prism:Destroy() end)
 end
 
 return Prism
