@@ -1,5 +1,5 @@
 --[[
-    PrismUI v1.2 — polished GUI library (single file)
+    PrismUI v1.3.1 — polished GUI library (single file)
 ]]
 
 local Players = game:GetService("Players")
@@ -50,7 +50,7 @@ local Theme = {
 }
 
 local Prism = {}
-Prism.Version = "1.3.0"
+Prism.Version = "1.3.1"
 Prism.Theme = Theme
 Prism.LoadDemo = true
 
@@ -491,7 +491,7 @@ function Prism:CreateWindow(opts)
     opts = opts or {}
     local title = opts.Name or "Prism UI"
     local subtitle = opts.Subtitle or ""
-    local winSize = opts.Size or Vector2.new(640, 460)
+    local winSize = opts.Size or Vector2.new(720, 460)
     local toggleKey = opts.Keybind or Enum.KeyCode.RightControl
     local notifyOnLoad = opts.NotifyOnLoad == true
 
@@ -535,7 +535,7 @@ function Prism:CreateWindow(opts)
 
     local WIN_PAD = 12
     local HEADER_H = 44
-    local SIDEBAR_W = 98
+    local SIDEBAR_W = 108
     local SIDEBAR_GAP = 8
 
     -- Header (fills top, clipped by window corners)
@@ -681,15 +681,6 @@ function Prism:CreateWindow(opts)
     })
     VList(tabButtons, 4)
 
-    local tabIndicator = Tag(Create("Frame", {
-        BackgroundColor3 = Theme.Accent,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0, 2, 0, 34),
-        Position = UDim2.new(0, 2, 0, 0),
-        ZIndex = 5,
-        Parent = tabButtons,
-    }), "TabIndicator")
-
     Tag(Create("Frame", {
         Name = "Divider",
         BackgroundColor3 = Theme.Border,
@@ -717,18 +708,6 @@ function Prism:CreateWindow(opts)
         Parent = content,
     })
 
-    local function MoveIndicator(btn)
-        task.defer(function()
-            if not btn or not btn.Parent then return end
-            local y = btn.AbsolutePosition.Y - tabButtons.AbsolutePosition.Y
-            local h = btn.AbsoluteSize.Y
-            Tween(tabIndicator, {
-                Position = UDim2.new(0, 2, 0, y),
-                Size = UDim2.new(0, 2, 0, h),
-            }, Theme.TweenFast):Play()
-        end)
-    end
-
     local function SelectTab(data)
         for _, t in ipairs(tabs) do
             t.Page.Visible = false
@@ -736,6 +715,7 @@ function Prism:CreateWindow(opts)
             Tween(t.Title, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
             Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
             Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+            if t.Stripe then t.Stripe.Visible = false end
         end
         data.Page.Visible = true
         activeTab = data
@@ -743,7 +723,7 @@ function Prism:CreateWindow(opts)
         Tween(data.Title, { TextColor3 = Theme.Text }, Theme.TweenFast):Play()
         Tween(data.IconBg, { BackgroundTransparency = 0.5 }, Theme.TweenFast):Play()
         Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
-        MoveIndicator(data.Button)
+        if data.Stripe then data.Stripe.Visible = true end
     end
 
     local window = { _Win = win, _Shadow = shadow }
@@ -798,6 +778,19 @@ function Prism:CreateWindow(opts)
         })
         Corner(tabBtn, UDim.new(0, 6))
 
+        local tabStripe = Tag(Create("Frame", {
+            Name = "TabStripe",
+            BackgroundColor3 = Theme.Accent,
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 2, 0.65, 0),
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 1, 0.5, 0),
+            Visible = isFirst,
+            ZIndex = 6,
+            Parent = tabBtn,
+        }), "TabIndicator")
+        Corner(tabStripe, UDim.new(0, 1))
+
         tabBtn.MouseEnter:Connect(function()
             if activeTab and activeTab.Button == tabBtn then return end
             Tween(tabBtn, { BackgroundTransparency = 0.55 }, Theme.TweenFast):Play()
@@ -809,8 +802,8 @@ function Prism:CreateWindow(opts)
 
         local tabInner = Create("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -8, 1, 0),
-            Position = UDim2.new(0, 6, 0, 0),
+            Size = UDim2.new(1, -10, 1, 0),
+            Position = UDim2.new(0, 8, 0, 0),
             Parent = tabBtn,
         })
         HList(tabInner, 6, Enum.VerticalAlignment.Center)
@@ -853,6 +846,7 @@ function Prism:CreateWindow(opts)
             Name = name,
             Page = page,
             Button = tabBtn,
+            Stripe = tabStripe,
             Icon = iconLbl,
             IconBg = iconBg,
             Title = titleLbl,
@@ -864,7 +858,6 @@ function Prism:CreateWindow(opts)
         if isFirst then
             page.Visible = true
             activeTab = tabData
-            task.defer(function() MoveIndicator(tabBtn) end)
         end
 
         local tabAPI = {}
@@ -1513,7 +1506,6 @@ function Prism:CreateWindow(opts)
     }, Theme.TweenOpen):Play()
 
     task.defer(function()
-        if activeTab then MoveIndicator(activeTab.Button) end
         if notifyOnLoad then
             Prism:Notify({
                 Title = "Prism UI",
@@ -1541,7 +1533,7 @@ if Prism.LoadDemo then
     local Window = Prism:CreateWindow({
         Name = "Prism UI",
         Subtitle = "v" .. Prism.Version,
-        Size = Vector2.new(640, 460),
+        Size = Vector2.new(720, 460),
         Keybind = Enum.KeyCode.RightControl,
         NotifyOnLoad = true,
     })
