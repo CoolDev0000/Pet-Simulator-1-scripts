@@ -1,8 +1,7 @@
 --[[
-    PrismUI v1.1 — single-file GUI library (fully reworked layout)
+    PrismUI v1.2 — polished GUI library (single file)
 ]]
 
---// Services
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,7 +11,6 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
---// Executor
 local function GetParent()
     if gethui then return gethui() end
     return CoreGui
@@ -23,35 +21,43 @@ local function Protect(gui)
     if gethui then gui.Parent = gethui() end
 end
 
---// Theme
 local Theme = {
-    Background = Color3.fromRGB(10, 10, 16),
-    Surface = Color3.fromRGB(16, 16, 26),
-    SurfaceHover = Color3.fromRGB(24, 24, 38),
-    Card = Color3.fromRGB(20, 20, 32),
-    Border = Color3.fromRGB(38, 38, 58),
+    Background = Color3.fromRGB(8, 8, 14),
+    Surface = Color3.fromRGB(14, 14, 22),
+    SurfaceHover = Color3.fromRGB(22, 22, 34),
+    Card = Color3.fromRGB(18, 18, 28),
+    CardHover = Color3.fromRGB(26, 26, 40),
+    Border = Color3.fromRGB(36, 36, 54),
+    BorderLight = Color3.fromRGB(55, 55, 78),
     Accent = Color3.fromRGB(108, 92, 231),
     Accent2 = Color3.fromRGB(0, 210, 255),
-    Text = Color3.fromRGB(245, 245, 250),
-    TextDim = Color3.fromRGB(130, 130, 155),
+    Text = Color3.fromRGB(248, 248, 252),
+    TextDim = Color3.fromRGB(120, 120, 148),
     Success = Color3.fromRGB(46, 213, 115),
     Warning = Color3.fromRGB(255, 184, 0),
     Error = Color3.fromRGB(255, 71, 87),
-    ToggleOff = Color3.fromRGB(48, 48, 68),
+    CloseHover = Color3.fromRGB(255, 71, 87),
+    ToggleOff = Color3.fromRGB(42, 42, 60),
     ToggleOn = Color3.fromRGB(108, 92, 231),
     Font = Enum.Font.GothamMedium,
     FontBold = Enum.Font.GothamBold,
     FontLight = Enum.Font.Gotham,
     Corner = UDim.new(0, 10),
-    CornerSm = UDim.new(0, 6),
-    TweenFast = TweenInfo.new(0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    TweenMed = TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    CornerSm = UDim.new(0, 7),
+    TweenFast = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenMed = TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    TweenOpen = TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 }
 
 local Prism = {}
-Prism.Version = "1.1.0"
+Prism.Version = "1.2.0"
 Prism.Theme = Theme
 Prism.LoadDemo = true
+
+local RootGui
+local NotifGui
+local NotifList
+local DropdownLayer
 
 local function Tween(obj, props, info)
     return TweenService:Create(obj, info or Theme.TweenMed, props)
@@ -70,10 +76,11 @@ local function Corner(parent, radius)
     return Create("UICorner", { CornerRadius = radius or Theme.Corner, Parent = parent })
 end
 
-local function Stroke(parent, color, thickness)
+local function Stroke(parent, color, thickness, trans)
     return Create("UIStroke", {
         Color = color or Theme.Border,
         Thickness = thickness or 1,
+        Transparency = trans or 0,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Parent = parent,
     })
@@ -114,19 +121,19 @@ local function Gradient(parent, c1, c2, rot)
             ColorSequenceKeypoint.new(0, c1 or Theme.Accent),
             ColorSequenceKeypoint.new(1, c2 or Theme.Accent2),
         }),
-        Rotation = rot or 35,
+        Rotation = rot or 30,
         Parent = parent,
     })
 end
 
 local function Hover(btn, normal, hover)
-    local n = normal or Theme.Surface
-    local h = hover or Theme.SurfaceHover
+    local n, h = normal or Theme.Surface, hover or Theme.SurfaceHover
+    local baseTrans = btn.BackgroundTransparency
     btn.MouseEnter:Connect(function()
         Tween(btn, { BackgroundColor3 = h }, Theme.TweenFast):Play()
     end)
     btn.MouseLeave:Connect(function()
-        Tween(btn, { BackgroundColor3 = n }, Theme.TweenFast):Play()
+        Tween(btn, { BackgroundColor3 = n, BackgroundTransparency = btn.BackgroundTransparency }, Theme.TweenFast):Play()
     end)
 end
 
@@ -159,23 +166,54 @@ local function Ripple(btn)
     btn.MouseButton1Click:Connect(function()
         local r = Create("Frame", {
             BackgroundColor3 = Color3.new(1, 1, 1),
-            BackgroundTransparency = 0.65,
+            BackgroundTransparency = 0.6,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.fromOffset(Mouse.X - btn.AbsolutePosition.X, Mouse.Y - btn.AbsolutePosition.Y),
             Size = UDim2.fromOffset(4, 4),
-            ZIndex = (btn.ZIndex or 1) + 3,
+            ZIndex = btn.ZIndex + 5,
             Parent = btn,
         })
         Corner(r, UDim.new(1, 0))
-        local s = math.max(btn.AbsoluteSize.X, btn.AbsoluteSize.Y) * 2.2
-        Tween(r, { Size = UDim2.fromOffset(s, s), BackgroundTransparency = 1 }, TweenInfo.new(0.45)):Play()
-        task.delay(0.5, function() if r.Parent then r:Destroy() end end)
+        local s = math.max(btn.AbsoluteSize.X, btn.AbsoluteSize.Y) * 2.5
+        Tween(r, { Size = UDim2.fromOffset(s, s), BackgroundTransparency = 1 }, TweenInfo.new(0.4)):Play()
+        task.delay(0.45, function() if r.Parent then r:Destroy() end end)
     end)
 end
 
---// Notifications (holder in Lua — Roblox Instances cannot use custom ._ fields)
-local NotifGui
-local NotifList
+local function Divider(parent, trans)
+    return Create("Frame", {
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = trans or 0.5,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 1),
+        Parent = parent,
+    })
+end
+
+local function GetRoot()
+    if RootGui and RootGui.Parent then return RootGui end
+    RootGui = Create("ScreenGui", {
+        Name = "PrismUI",
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        DisplayOrder = 50,
+        Parent = GetParent(),
+    })
+    Protect(RootGui)
+    DropdownLayer = Create("Frame", {
+        Name = "DropdownLayer",
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = 200,
+        Parent = RootGui,
+    })
+    return RootGui
+end
+
+local function GetDropdownLayer()
+    GetRoot()
+    return DropdownLayer
+end
 
 local function GetNotifGui()
     if NotifGui and NotifGui.Parent and NotifList and NotifList.Parent then
@@ -193,12 +231,12 @@ local function GetNotifGui()
         Name = "List",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -20, 0, 20),
-        Size = UDim2.fromOffset(300, 0),
+        Position = UDim2.new(1, -16, 0, 16),
+        Size = UDim2.fromOffset(310, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = NotifGui,
     })
-    VList(NotifList, 10)
+    VList(NotifList, 8)
     return NotifGui, NotifList
 end
 
@@ -217,28 +255,28 @@ function Prism:Notify(opts)
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         ClipsDescendants = true,
-        LayoutOrder = tick(),
+        LayoutOrder = math.floor(tick() * 100) % 100000,
         Parent = holder,
     })
-    Corner(card)
-    Stroke(card)
-    Pad(card, 12, 14, 12, 20)
+    Corner(card, Theme.CornerSm)
+    Stroke(card, Theme.BorderLight, 1, 0.3)
 
     Create("Frame", {
         BackgroundColor3 = accent,
-        Size = UDim2.new(0, 3, 1, -8),
-        Position = UDim2.new(0, -16, 0, 4),
         BorderSizePixel = 0,
+        Size = UDim2.new(0, 3, 1, 0),
         Parent = card,
     })
 
-    local inner = Create("Frame", {
+    local body = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 0),
+        Size = UDim2.new(1, -3, 0, 0),
+        Position = UDim2.new(0, 3, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = card,
     })
-    VList(inner, 4)
+    Pad(body, 11, 12, 11, 12)
+    VList(body, 3)
 
     Create("TextLabel", {
         BackgroundTransparency = 1,
@@ -249,7 +287,7 @@ function Prism:Notify(opts)
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(1, 0, 0, 18),
         LayoutOrder = 1,
-        Parent = inner,
+        Parent = body,
     })
     if content ~= "" then
         Create("TextLabel", {
@@ -263,109 +301,124 @@ function Prism:Notify(opts)
             AutomaticSize = Enum.AutomaticSize.Y,
             Size = UDim2.new(1, 0, 0, 0),
             LayoutOrder = 2,
-            Parent = inner,
+            Parent = body,
         })
     end
 
-    card.BackgroundTransparency = 1
-    Tween(card, { BackgroundTransparency = 0 }, Theme.TweenFast):Play()
+    card.Position = UDim2.new(1, 40, 0, 0)
+    card.BackgroundTransparency = 0.15
+    Tween(card, { Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 0 }, Theme.TweenMed):Play()
 
     task.delay(duration, function()
         if not card.Parent then return end
-        local tw = Tween(card, { BackgroundTransparency = 1 }, Theme.TweenMed)
+        local tw = Tween(card, { Position = UDim2.new(1, 40, 0, 0), BackgroundTransparency = 1 }, Theme.TweenMed)
         tw:Play()
         tw.Completed:Wait()
         card:Destroy()
     end)
 end
 
---// Root
-local RootGui
-
-local function GetRoot()
-    if RootGui and RootGui.Parent then return RootGui end
-    RootGui = Create("ScreenGui", {
-        Name = "PrismUI",
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        DisplayOrder = 50,
-        Parent = GetParent(),
-    })
-    Protect(RootGui)
-    return RootGui
-end
-
 function Prism:Destroy()
+    if DropdownLayer then
+        for _, c in ipairs(DropdownLayer:GetChildren()) do c:Destroy() end
+    end
     if RootGui then RootGui:Destroy() RootGui = nil end
     if NotifGui then NotifGui:Destroy() NotifGui = nil end
     NotifList = nil
+    DropdownLayer = nil
 end
 
 function Prism:SetTheme(t)
     for k, v in pairs(t or {}) do Theme[k] = v end
 end
 
---// Window
 function Prism:CreateWindow(opts)
     opts = opts or {}
     local title = opts.Name or "Prism UI"
     local subtitle = opts.Subtitle or ""
-    local winSize = opts.Size or Vector2.new(620, 440)
+    local winSize = opts.Size or Vector2.new(640, 460)
     local toggleKey = opts.Keybind or Enum.KeyCode.RightControl
+    local notifyOnLoad = opts.NotifyOnLoad == true
 
     GetRoot()
 
     local tabs = {}
     local activeTab = nil
     local minimized = false
+    local savedSize = UDim2.fromOffset(winSize.X, winSize.Y)
 
-    -- Main window
+    local shadow = Create("ImageLabel", {
+        Name = "Shadow",
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://6015897843",
+        ImageColor3 = Color3.new(0, 0, 0),
+        ImageTransparency = 0.45,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        Size = UDim2.fromOffset(winSize.X + 24, winSize.Y + 24),
+        Position = UDim2.new(0.5, -(winSize.X + 24) / 2, 0.5, -(winSize.Y + 24) / 2),
+        Parent = RootGui,
+    })
+
     local win = Create("Frame", {
         Name = "PrismWindow",
         BackgroundColor3 = Theme.Background,
         BorderSizePixel = 0,
-        Size = UDim2.fromOffset(winSize.X, winSize.Y),
+        Size = savedSize,
         Position = UDim2.new(0.5, -winSize.X / 2, 0.5, -winSize.Y / 2),
         ClipsDescendants = true,
         Parent = RootGui,
     })
-    Corner(win, UDim.new(0, 12))
-    Stroke(win, Theme.Border, 1)
+    Corner(win, UDim.new(0, 14))
+    Stroke(win, Theme.BorderLight, 1, 0.5)
+
+    shadow.Position = UDim2.new(
+        win.Position.X.Scale, win.Position.X.Offset - 12,
+        win.Position.Y.Scale, win.Position.Y.Offset - 10
+    )
 
     local accentBar = Create("Frame", {
-        BackgroundColor3 = Theme.Accent,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 2),
+        BackgroundColor3 = Theme.Accent,
+        Size = UDim2.new(1, 0, 0, 3),
         Parent = win,
     })
     Gradient(accentBar, Theme.Accent, Theme.Accent2, 0)
 
-    -- Title bar (fixed height, no list overlap)
     local titleBar = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 48),
-        Position = UDim2.new(0, 0, 0, 2),
+        Size = UDim2.new(1, 0, 0, 50),
+        Position = UDim2.new(0, 0, 0, 3),
         Parent = win,
     })
 
-    local titleText = Create("Frame", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, -100, 1, 0),
-        Position = UDim2.new(0, 16, 0, 0),
+    Create("Frame", {
+        BackgroundColor3 = Theme.Border,
+        BackgroundTransparency = 0.6,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, -32, 0, 1),
+        Position = UDim2.new(0, 16, 1, -1),
         Parent = titleBar,
     })
-    VList(titleText, 0)
+
+    local titleBlock = Create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -96, 1, 0),
+        Position = UDim2.new(0, 18, 0, 6),
+        Parent = titleBar,
+    })
+    VList(titleBlock, 1)
 
     Create("TextLabel", {
         BackgroundTransparency = 1,
         Font = Theme.FontBold,
         Text = title,
         TextColor3 = Theme.Text,
-        TextSize = 17,
+        TextSize = 18,
         TextXAlignment = Enum.TextXAlignment.Left,
         Size = UDim2.new(1, 0, 0, 22),
         LayoutOrder = 1,
-        Parent = titleText,
+        Parent = titleBlock,
     })
     if subtitle ~= "" then
         Create("TextLabel", {
@@ -377,99 +430,123 @@ function Prism:CreateWindow(opts)
             TextXAlignment = Enum.TextXAlignment.Left,
             Size = UDim2.new(1, 0, 0, 14),
             LayoutOrder = 2,
-            Parent = titleText,
+            Parent = titleBlock,
         })
     end
 
-    local btnHolder = Create("Frame", {
+    local btnRow = Create("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.fromOffset(68, 28),
-        Position = UDim2.new(1, -80, 0, 10),
+        Size = UDim2.fromOffset(72, 30),
+        Position = UDim2.new(1, -86, 0, 10),
         Parent = titleBar,
     })
-    HList(btnHolder, 8)
+    HList(btnRow, 8)
 
-    local function WinBtn(text, col)
+    local function WinBtn(symbol, isClose)
         local b = Create("TextButton", {
             BackgroundColor3 = Theme.Surface,
-            Text = text,
+            BackgroundTransparency = 0.3,
+            Text = symbol,
             Font = Theme.FontBold,
             TextColor3 = Theme.TextDim,
-            TextSize = 15,
-            Size = UDim2.fromOffset(28, 28),
+            TextSize = 16,
+            Size = UDim2.fromOffset(30, 30),
             AutoButtonColor = false,
-            Parent = btnHolder,
+            Parent = btnRow,
         })
         Corner(b, Theme.CornerSm)
-        Hover(b, Theme.Surface, Theme.SurfaceHover)
+        if isClose then
+            b.MouseEnter:Connect(function()
+                Tween(b, { BackgroundColor3 = Theme.CloseHover, TextColor3 = Theme.Text }, Theme.TweenFast):Play()
+            end)
+            b.MouseLeave:Connect(function()
+                Tween(b, { BackgroundColor3 = Theme.Surface, TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+            end)
+        else
+            Hover(b, Theme.Surface, Theme.SurfaceHover)
+        end
         return b
     end
 
-    local minBtn = WinBtn("−")
-    local closeBtn = WinBtn("×")
+    local minBtn = WinBtn("−", false)
+    local closeBtn = WinBtn("×", true)
 
     local body = Create("Frame", {
         Name = "Body",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -24, 1, -62),
-        Position = UDim2.new(0, 12, 0, 54),
+        Size = UDim2.new(1, -28, 1, -66),
+        Position = UDim2.new(0, 14, 0, 58),
         Parent = win,
     })
 
-    -- Sidebar
-    local SIDEBAR_W = 130
+    local SIDEBAR_W = 136
     local sidebar = Create("Frame", {
         BackgroundColor3 = Theme.Surface,
+        BackgroundTransparency = 0.15,
         Size = UDim2.new(0, SIDEBAR_W, 1, 0),
         Parent = body,
     })
-    Corner(sidebar)
-    Stroke(sidebar)
-    Pad(sidebar, 8, 6, 8, 10)
+    Corner(sidebar, Theme.CornerSm)
+    Stroke(sidebar, Theme.Border, 1, 0.4)
+    Pad(sidebar, 10, 8, 10, 8)
+
+    Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Font = Theme.FontBold,
+        Text = "MENU",
+        TextColor3 = Theme.TextDim,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, 0, 0, 14),
+        Position = UDim2.new(0, 4, 0, 2),
+        Parent = sidebar,
+    })
+
+    local tabButtons = Create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, -22),
+        Position = UDim2.new(0, 0, 0, 20),
+        Parent = sidebar,
+    })
+    VList(tabButtons, 5)
 
     local tabIndicator = Create("Frame", {
         BackgroundColor3 = Theme.Accent,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 3, 0, 34),
-        Position = UDim2.new(0, 2, 0, 8),
+        Size = UDim2.new(0, 3, 0, 38),
+        Position = UDim2.new(0, 0, 0, 0),
         ZIndex = 2,
-        Parent = sidebar,
+        Parent = tabButtons,
     })
     Corner(tabIndicator, UDim.new(0, 2))
     Gradient(tabIndicator)
 
-    local tabButtons = Create("Frame", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = 3,
-        Parent = sidebar,
-    })
-    VList(tabButtons, 4)
-
-    -- Content (overlay pages — NOT stacked in one list)
     local content = Create("Frame", {
         BackgroundColor3 = Theme.Surface,
-        Size = UDim2.new(1, -(SIDEBAR_W + 10), 1, 0),
-        Position = UDim2.new(0, SIDEBAR_W + 10, 0, 0),
-        ClipsDescendants = true,
+        BackgroundTransparency = 0.1,
+        Size = UDim2.new(1, -(SIDEBAR_W + 12), 1, 0),
+        Position = UDim2.new(0, SIDEBAR_W + 12, 0, 0),
+        ClipsDescendants = false,
         Parent = body,
     })
-    Corner(content)
-    Stroke(content)
+    Corner(content, Theme.CornerSm)
+    Stroke(content, Theme.Border, 1, 0.35)
 
     local pagesHost = Create("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
+        ClipsDescendants = true,
         Parent = content,
     })
+    Corner(pagesHost, Theme.CornerSm)
 
     local function MoveIndicator(btn)
         task.defer(function()
             if not btn or not btn.Parent then return end
-            local y = btn.AbsolutePosition.Y - sidebar.AbsolutePosition.Y
+            local y = btn.AbsolutePosition.Y - tabButtons.AbsolutePosition.Y
             local h = btn.AbsoluteSize.Y
             Tween(tabIndicator, {
-                Position = UDim2.new(0, 2, 0, y),
+                Position = UDim2.new(0, 0, 0, y),
                 Size = UDim2.new(0, 3, 0, h),
             }, Theme.TweenFast):Play()
         end)
@@ -478,22 +555,21 @@ function Prism:CreateWindow(opts)
     local function SelectTab(data)
         for _, t in ipairs(tabs) do
             t.Page.Visible = false
-            Tween(t.Button, {
-                BackgroundTransparency = 1,
-                BackgroundColor3 = Theme.Card,
-            }, Theme.TweenFast):Play()
+            Tween(t.Button, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
             Tween(t.Title, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
+            Tween(t.IconBg, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
             Tween(t.Icon, { TextColor3 = Theme.TextDim }, Theme.TweenFast):Play()
         end
         data.Page.Visible = true
         activeTab = data
-        Tween(data.Button, { BackgroundTransparency = 0, BackgroundColor3 = Theme.Card }, Theme.TweenFast):Play()
+        Tween(data.Button, { BackgroundTransparency = 0 }, Theme.TweenFast):Play()
         Tween(data.Title, { TextColor3 = Theme.Text }, Theme.TweenFast):Play()
+        Tween(data.IconBg, { BackgroundTransparency = 0.5 }, Theme.TweenFast):Play()
         Tween(data.Icon, { TextColor3 = Theme.Accent }, Theme.TweenFast):Play()
         MoveIndicator(data.Button)
     end
 
-    local window = { _Win = win }
+    local window = { _Win = win, _Shadow = shadow }
 
     function window:SelectTabByName(name)
         for _, t in ipairs(tabs) do
@@ -504,13 +580,11 @@ function Prism:CreateWindow(opts)
     function window:Tab(name, icon)
         icon = icon or "•"
 
-        -- Page: full-size overlay + own scroll
         local page = Create("Frame", {
             Name = name .. "_Page",
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 1, 0),
             Visible = false,
-            ZIndex = 1,
             Parent = pagesHost,
         })
 
@@ -518,42 +592,60 @@ function Prism:CreateWindow(opts)
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 1, 0),
-            ScrollBarThickness = 3,
+            ScrollBarThickness = 4,
             ScrollBarImageColor3 = Theme.Accent,
+            ScrollBarImageTransparency = 0.3,
             ScrollingDirection = Enum.ScrollingDirection.Y,
             CanvasSize = UDim2.new(0, 0, 0, 0),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             Parent = page,
         })
-        Pad(pageScroll, 12, 12, 12, 12)
+        Pad(pageScroll, 14, 14, 14, 14)
 
         local pageContent = Create("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 0),
+            Size = UDim2.new(1, -8, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
             Parent = pageScroll,
         })
-        VList(pageContent, 14)
+        VList(pageContent, 16)
 
-        -- Tab button (fixed layout: icon box + title)
         local isFirst = #tabs == 0
         local tabBtn = Create("TextButton", {
             BackgroundColor3 = Theme.Card,
-            BackgroundTransparency = isFirst and 0 or 1,
+            BackgroundTransparency = isFirst and 0.35 or 1,
             Text = "",
-            Size = UDim2.new(1, 0, 0, 36),
+            Size = UDim2.new(1, 0, 0, 40),
             AutoButtonColor = false,
             Parent = tabButtons,
         })
         Corner(tabBtn, Theme.CornerSm)
 
-        local tabRow = Create("Frame", {
+        tabBtn.MouseEnter:Connect(function()
+            if activeTab and activeTab.Button == tabBtn then return end
+            Tween(tabBtn, { BackgroundTransparency = 0.6 }, Theme.TweenFast):Play()
+        end)
+        tabBtn.MouseLeave:Connect(function()
+            if activeTab and activeTab.Button == tabBtn then return end
+            Tween(tabBtn, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
+        end)
+
+        local tabInner = Create("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, -12, 1, 0),
-            Position = UDim2.new(0, 6, 0, 0),
+            Size = UDim2.new(1, -10, 1, 0),
+            Position = UDim2.new(0, 8, 0, 0),
             Parent = tabBtn,
         })
-        HList(tabRow, 8, Enum.VerticalAlignment.Center)
+        HList(tabInner, 10, Enum.VerticalAlignment.Center)
+
+        local iconBg = Create("Frame", {
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = isFirst and 0.75 or 1,
+            Size = UDim2.fromOffset(28, 28),
+            LayoutOrder = 1,
+            Parent = tabInner,
+        })
+        Corner(iconBg, Theme.CornerSm)
 
         local iconLbl = Create("TextLabel", {
             Name = "Icon",
@@ -561,11 +653,9 @@ function Prism:CreateWindow(opts)
             Font = Theme.FontBold,
             Text = icon,
             TextColor3 = isFirst and Theme.Accent or Theme.TextDim,
-            TextSize = 14,
-            TextYAlignment = Enum.TextYAlignment.Center,
-            Size = UDim2.fromOffset(22, 36),
-            LayoutOrder = 1,
-            Parent = tabRow,
+            TextSize = 13,
+            Size = UDim2.fromScale(1, 1),
+            Parent = iconBg,
         })
 
         local titleLbl = Create("TextLabel", {
@@ -574,28 +664,25 @@ function Prism:CreateWindow(opts)
             Font = Theme.Font,
             Text = name,
             TextColor3 = isFirst and Theme.Text or Theme.TextDim,
-            TextSize = 13,
+            TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Center,
-            Size = UDim2.new(1, -30, 0, 36),
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            Size = UDim2.new(1, -38, 0, 20),
             LayoutOrder = 2,
-            Parent = tabRow,
+            Parent = tabInner,
         })
 
         local tabData = {
             Name = name,
             Page = page,
-            Scroll = pageScroll,
-            Content = pageContent,
             Button = tabBtn,
             Icon = iconLbl,
+            IconBg = iconBg,
             Title = titleLbl,
         }
         table.insert(tabs, tabData)
 
-        tabBtn.MouseButton1Click:Connect(function()
-            SelectTab(tabData)
-        end)
+        tabBtn.MouseButton1Click:Connect(function() SelectTab(tabData) end)
 
         if isFirst then
             page.Visible = true
@@ -603,8 +690,15 @@ function Prism:CreateWindow(opts)
             task.defer(function() MoveIndicator(tabBtn) end)
         end
 
-        -- Section builder
         local tabAPI = {}
+        local elementCount = 0
+
+        local function nextDivider(box)
+            elementCount += 1
+            if elementCount > 1 then
+                Divider(box, 0.65)
+            end
+        end
 
         function tabAPI:Section(sectionName)
             local block = Create("Frame", {
@@ -613,7 +707,24 @@ function Prism:CreateWindow(opts)
                 AutomaticSize = Enum.AutomaticSize.Y,
                 Parent = pageContent,
             })
-            VList(block, 6)
+            VList(block, 8)
+
+            local headRow = Create("Frame", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 20),
+                LayoutOrder = 1,
+                Parent = block,
+            })
+            HList(headRow, 8, Enum.VerticalAlignment.Center)
+
+            local accentMark = Create("Frame", {
+                BackgroundColor3 = Theme.Accent,
+                Size = UDim2.new(0, 3, 0, 14),
+                BorderSizePixel = 0,
+                LayoutOrder = 1,
+                Parent = headRow,
+            })
+            Corner(accentMark, UDim.new(0, 2))
 
             Create("TextLabel", {
                 BackgroundTransparency = 1,
@@ -622,26 +733,29 @@ function Prism:CreateWindow(opts)
                 TextColor3 = Theme.TextDim,
                 TextSize = 11,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                Size = UDim2.new(1, 0, 0, 16),
-                LayoutOrder = 1,
-                Parent = block,
+                Size = UDim2.new(1, -12, 0, 16),
+                LayoutOrder = 2,
+                Parent = headRow,
             })
 
             local box = Create("Frame", {
                 BackgroundColor3 = Theme.Card,
+                BackgroundTransparency = 0.2,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 LayoutOrder = 2,
                 Parent = block,
             })
-            Corner(box)
-            Stroke(box)
-            Pad(box, 8, 10, 8, 10)
-            VList(box, 4)
+            Corner(box, Theme.CornerSm)
+            Stroke(box, Theme.Border, 1, 0.5)
+            Pad(box, 6, 10, 6, 10)
+            VList(box, 2)
 
+            elementCount = 0
             local api = {}
 
             function api:Label(text)
+                nextDivider(box)
                 Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.FontLight,
@@ -657,18 +771,20 @@ function Prism:CreateWindow(opts)
             end
 
             function api:Button(text, callback)
+                nextDivider(box)
                 local b = Create("TextButton", {
                     BackgroundColor3 = Theme.Accent,
                     Text = text,
                     Font = Theme.FontBold,
                     TextColor3 = Theme.Text,
                     TextSize = 13,
-                    Size = UDim2.new(1, 0, 0, 36),
+                    Size = UDim2.new(1, 0, 0, 38),
                     AutoButtonColor = false,
                     Parent = box,
                 })
                 Corner(b, Theme.CornerSm)
                 Gradient(b)
+                Stroke(b, Theme.Accent2, 1, 0.7)
                 Ripple(b)
                 b.MouseButton1Click:Connect(function()
                     if callback then callback() end
@@ -676,10 +792,11 @@ function Prism:CreateWindow(opts)
             end
 
             function api:Toggle(label, default, callback)
+                nextDivider(box)
                 local on = default == true
                 local row = Create("Frame", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 38),
+                    Size = UDim2.new(1, 0, 0, 40),
                     Parent = box,
                 })
 
@@ -691,8 +808,7 @@ function Prism:CreateWindow(opts)
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     TextYAlignment = Enum.TextYAlignment.Center,
-                    Size = UDim2.new(1, -54, 1, 0),
-                    Position = UDim2.new(0, 0, 0, 0),
+                    Size = UDim2.new(1, -56, 1, 0),
                     Parent = row,
                 })
 
@@ -701,48 +817,48 @@ function Prism:CreateWindow(opts)
                     Text = "",
                     AnchorPoint = Vector2.new(1, 0.5),
                     Position = UDim2.new(1, 0, 0.5, 0),
-                    Size = UDim2.fromOffset(46, 24),
+                    Size = UDim2.fromOffset(48, 26),
                     AutoButtonColor = false,
                     Parent = row,
                 })
                 Corner(track, UDim.new(1, 0))
+                Stroke(track, Theme.BorderLight, 1, 0.6)
 
                 local knob = Create("Frame", {
                     BackgroundColor3 = Theme.Text,
                     AnchorPoint = Vector2.new(0, 0.5),
-                    Position = on and UDim2.new(1, -21, 0.5, 0) or UDim2.new(0, 3, 0.5, 0),
-                    Size = UDim2.fromOffset(18, 18),
+                    Position = on and UDim2.new(1, -23, 0.5, 0) or UDim2.new(0, 3, 0.5, 0),
+                    Size = UDim2.fromOffset(20, 20),
                     Parent = track,
                 })
                 Corner(knob, UDim.new(1, 0))
+                Stroke(knob, Theme.Border, 1, 0.8)
 
                 local function set(v, fire)
                     on = v
                     Tween(track, { BackgroundColor3 = on and Theme.ToggleOn or Theme.ToggleOff }, Theme.TweenFast):Play()
                     Tween(knob, {
-                        Position = on and UDim2.new(1, -21, 0.5, 0) or UDim2.new(0, 3, 0.5, 0),
+                        Position = on and UDim2.new(1, -23, 0.5, 0) or UDim2.new(0, 3, 0.5, 0),
                     }, Theme.TweenFast):Play()
                     if fire and callback then callback(on) end
                 end
 
-                track.MouseButton1Click:Connect(function()
-                    set(not on, true)
-                end)
+                track.MouseButton1Click:Connect(function() set(not on, true) end)
                 if on and callback then callback(true) end
             end
 
             function api:Slider(label, min, max, default, callback)
-                min = min or 0
-                max = max or 100
+                nextDivider(box)
+                min, max = min or 0, max or 100
                 default = math.clamp(default or min, min, max)
                 local val = default
 
                 local wrap = Create("Frame", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 50),
+                    Size = UDim2.new(1, 0, 0, 54),
                     Parent = box,
                 })
-                VList(wrap, 6)
+                VList(wrap, 8)
 
                 local head = Create("Frame", {
                     BackgroundTransparency = 1,
@@ -758,7 +874,7 @@ function Prism:CreateWindow(opts)
                     TextColor3 = Theme.Text,
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Size = UDim2.new(1, -36, 1, 0),
+                    Size = UDim2.new(1, -40, 1, 0),
                     Parent = head,
                 })
 
@@ -769,15 +885,15 @@ function Prism:CreateWindow(opts)
                     TextColor3 = Theme.Accent2,
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Right,
-                    Size = UDim2.fromOffset(36, 18),
-                    Position = UDim2.new(1, -36, 0, 0),
+                    Size = UDim2.fromOffset(40, 18),
+                    Position = UDim2.new(1, -40, 0, 0),
                     Parent = head,
                 })
 
                 local track = Create("TextButton", {
                     BackgroundColor3 = Theme.ToggleOff,
                     Text = "",
-                    Size = UDim2.new(1, 0, 0, 10),
+                    Size = UDim2.new(1, 0, 0, 12),
                     AutoButtonColor = false,
                     LayoutOrder = 2,
                     Parent = wrap,
@@ -793,33 +909,45 @@ function Prism:CreateWindow(opts)
                 Corner(fill, UDim.new(1, 0))
                 Gradient(fill)
 
-                local drag = false
+                local knob = Create("Frame", {
+                    BackgroundColor3 = Theme.Text,
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new((val - min) / math.max(max - min, 1), 0, 0.5, 0),
+                    Size = UDim2.fromOffset(16, 16),
+                    ZIndex = 2,
+                    Parent = track,
+                })
+                Corner(knob, UDim.new(1, 0))
+                Stroke(knob, Theme.Accent, 2, 0)
+
+                local dragging = false
                 local function setFromX(x, fire)
                     local rel = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
                     val = math.floor(min + (max - min) * rel + 0.5)
                     num.Text = tostring(val)
                     Tween(fill, { Size = UDim2.new(rel, 0, 1, 0) }, Theme.TweenFast):Play()
+                    Tween(knob, { Position = UDim2.new(rel, 0, 0.5, 0) }, Theme.TweenFast):Play()
                     if fire and callback then callback(val) end
                 end
 
                 track.MouseButton1Down:Connect(function()
-                    drag = true
+                    dragging = true
                     setFromX(Mouse.X, true)
                 end)
                 UserInputService.InputEnded:Connect(function(i)
-                    if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
                 end)
                 UserInputService.InputChanged:Connect(function(i)
-                    if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
+                    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
                         setFromX(Mouse.X, true)
                     end
                 end)
             end
 
             function api:Dropdown(label, options, default, callback)
+                nextDivider(box)
                 options = options or {}
                 local pick = default or options[1] or "—"
-                local opened = false
 
                 local wrap = Create("Frame", {
                     BackgroundTransparency = 1,
@@ -827,7 +955,7 @@ function Prism:CreateWindow(opts)
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = box,
                 })
-                VList(wrap, 4)
+                VList(wrap, 6)
 
                 Create("TextLabel", {
                     BackgroundTransparency = 1,
@@ -843,12 +971,13 @@ function Prism:CreateWindow(opts)
 
                 local drop = Create("TextButton", {
                     BackgroundColor3 = Theme.Surface,
-                    Text = pick,
+                    Text = "  " .. pick,
                     Font = Theme.Font,
                     TextColor3 = Theme.Text,
                     TextSize = 12,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Size = UDim2.new(1, 0, 0, 32),
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    Size = UDim2.new(1, 0, 0, 34),
                     AutoButtonColor = false,
                     LayoutOrder = 2,
                     Parent = wrap,
@@ -859,77 +988,102 @@ function Prism:CreateWindow(opts)
 
                 Create("TextLabel", {
                     BackgroundTransparency = 1,
-                    Font = Theme.Font,
                     Text = "▼",
+                    Font = Theme.Font,
                     TextColor3 = Theme.TextDim,
-                    TextSize = 10,
-                    Size = UDim2.fromOffset(20, 32),
-                    Position = UDim2.new(1, -24, 0, 0),
+                    TextSize = 9,
+                    Size = UDim2.fromOffset(24, 34),
+                    Position = UDim2.new(1, -26, 0, 0),
                     Parent = drop,
                 })
 
-                local menu = Create("Frame", {
-                    BackgroundColor3 = Theme.Surface,
-                    Size = UDim2.new(1, 0, 0, 0),
-                    ClipsDescendants = true,
-                    Visible = false,
-                    LayoutOrder = 3,
-                    ZIndex = 20,
-                    Parent = wrap,
-                })
-                Corner(menu, Theme.CornerSm)
-                Stroke(menu)
-                Pad(menu, 4, 4, 4, 4)
-                VList(menu, 2)
-
                 local function closeMenu()
-                    opened = false
-                    Tween(menu, { Size = UDim2.new(1, 0, 0, 0) }, Theme.TweenFast):Play()
-                    task.delay(0.2, function()
-                        menu.Visible = false
-                    end)
+                    local m = GetDropdownLayer():FindFirstChild("ActiveMenu")
+                    if m then m:Destroy() end
                 end
 
                 local function openMenu()
-                    for _, c in ipairs(menu:GetChildren()) do
-                        if c:IsA("GuiObject") and c.Name ~= "UIListLayout" and c.Name ~= "UIPadding" then
-                            c:Destroy()
-                        end
-                    end
+                    closeMenu()
+                    local layer = GetDropdownLayer()
+                    local ap, as = drop.AbsolutePosition, drop.AbsoluteSize
+
+                    local menu = Create("Frame", {
+                        Name = "ActiveMenu",
+                        BackgroundColor3 = Theme.Card,
+                        Position = UDim2.fromOffset(ap.X, ap.Y + as.Y + 4),
+                        Size = UDim2.fromOffset(as.X, 0),
+                        ClipsDescendants = true,
+                        Parent = layer,
+                    })
+                    Corner(menu, Theme.CornerSm)
+                    Stroke(menu, Theme.BorderLight)
+                    Pad(menu, 4, 4, 4, 4)
+                    VList(menu, 2)
+
                     for i, opt in ipairs(options) do
                         local ob = Create("TextButton", {
-                            BackgroundColor3 = Theme.Card,
-                            BackgroundTransparency = 0,
+                            BackgroundColor3 = Theme.Surface,
+                            BackgroundTransparency = pick == opt and 0.3 or 1,
                             Text = opt,
                             Font = Theme.Font,
-                            TextColor3 = Theme.Text,
+                            TextColor3 = pick == opt and Theme.Accent or Theme.Text,
                             TextSize = 12,
-                            Size = UDim2.new(1, 0, 0, 28),
+                            Size = UDim2.new(1, 0, 0, 30),
                             AutoButtonColor = false,
                             LayoutOrder = i,
                             Parent = menu,
                         })
                         Corner(ob, Theme.CornerSm)
-                        Hover(ob, Theme.Card, Theme.SurfaceHover)
+                        Hover(ob, Theme.Surface, Theme.SurfaceHover)
                         ob.MouseButton1Click:Connect(function()
                             pick = opt
-                            drop.Text = opt
+                            drop.Text = "  " .. opt
                             closeMenu()
                             if callback then callback(opt) end
                         end)
                     end
-                    menu.Visible = true
-                    opened = true
-                    local h = #options * 30 + 8
-                    Tween(menu, { Size = UDim2.new(1, 0, 0, h) }, Theme.TweenFast):Play()
+
+                    local h = #options * 32 + 8
+                    Tween(menu, { Size = UDim2.fromOffset(as.X, h) }, Theme.TweenFast):Play()
+
+                    task.defer(function()
+                        local conn
+                        conn = UserInputService.InputBegan:Connect(function(input, gpe)
+                            if gpe then return end
+                            if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+                            if not menu.Parent then conn:Disconnect() return end
+                            local pos = input.Position
+                            local mp, ms = menu.AbsolutePosition, menu.AbsoluteSize
+                            local dp, ds = drop.AbsolutePosition, drop.AbsoluteSize
+                            local inMenu = pos.X >= mp.X and pos.X <= mp.X + ms.X and pos.Y >= mp.Y and pos.Y <= mp.Y + ms.Y
+                            local inDrop = pos.X >= dp.X and pos.X <= dp.X + ds.X and pos.Y >= dp.Y and pos.Y <= dp.Y + ds.Y
+                            if not inMenu and not inDrop then
+                                closeMenu()
+                                conn:Disconnect()
+                            end
+                        end)
+                    end)
                 end
 
                 drop.MouseButton1Click:Connect(function()
-                    if opened then closeMenu() else openMenu() end
+                    if GetDropdownLayer():FindFirstChild("ActiveMenu") then
+                        closeMenu()
+                    else
+                        openMenu()
+                    end
                 end)
             end
 
             function api:Input(label, placeholder, callback)
+                nextDivider(box)
+                local fieldWrap = Create("Frame", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Parent = box,
+                })
+                VList(fieldWrap, 6)
+
                 Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.Font,
@@ -938,8 +1092,10 @@ function Prism:CreateWindow(opts)
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Size = UDim2.new(1, 0, 0, 16),
-                    Parent = box,
+                    LayoutOrder = 1,
+                    Parent = fieldWrap,
                 })
+
                 local field = Create("TextBox", {
                     BackgroundColor3 = Theme.Surface,
                     PlaceholderText = placeholder or "Enter text...",
@@ -950,24 +1106,31 @@ function Prism:CreateWindow(opts)
                     TextSize = 12,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     ClearTextOnFocus = false,
-                    Size = UDim2.new(1, 0, 0, 34),
-                    Parent = box,
+                    Size = UDim2.new(1, 0, 0, 36),
+                    LayoutOrder = 2,
+                    Parent = fieldWrap,
                 })
                 Corner(field, Theme.CornerSm)
                 Stroke(field)
                 Pad(field, 0, 10, 0, 10)
+
+                field.Focused:Connect(function()
+                    Tween(field, { BackgroundColor3 = Theme.SurfaceHover }, Theme.TweenFast):Play()
+                end)
                 field.FocusLost:Connect(function(enter)
+                    Tween(field, { BackgroundColor3 = Theme.Surface }, Theme.TweenFast):Play()
                     if enter and callback then callback(field.Text) end
                 end)
             end
 
             function api:Keybind(label, defaultKey, callback)
+                nextDivider(box)
                 local key = defaultKey or Enum.KeyCode.E
                 local listen = false
 
                 local row = Create("Frame", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 38),
+                    Size = UDim2.new(1, 0, 0, 40),
                     Parent = box,
                 })
 
@@ -979,7 +1142,7 @@ function Prism:CreateWindow(opts)
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     TextYAlignment = Enum.TextYAlignment.Center,
-                    Size = UDim2.new(1, -88, 1, 0),
+                    Size = UDim2.new(1, -92, 1, 0),
                     Parent = row,
                 })
 
@@ -991,7 +1154,7 @@ function Prism:CreateWindow(opts)
                     TextSize = 11,
                     AnchorPoint = Vector2.new(1, 0.5),
                     Position = UDim2.new(1, 0, 0.5, 0),
-                    Size = UDim2.fromOffset(80, 28),
+                    Size = UDim2.fromOffset(84, 30),
                     AutoButtonColor = false,
                     Parent = row,
                 })
@@ -1001,26 +1164,28 @@ function Prism:CreateWindow(opts)
                 kb.MouseButton1Click:Connect(function()
                     listen = true
                     kb.Text = "..."
+                    Tween(kb, { BackgroundColor3 = Theme.Accent, TextColor3 = Theme.Text }, Theme.TweenFast):Play()
                 end)
 
-                local conn
-                conn = UserInputService.InputBegan:Connect(function(input, gpe)
+                UserInputService.InputBegan:Connect(function(input, gpe)
                     if not listen or gpe then return end
                     if input.UserInputType == Enum.UserInputType.Keyboard then
                         key = input.KeyCode
                         kb.Text = key.Name
                         listen = false
+                        Tween(kb, { BackgroundColor3 = Theme.Surface, TextColor3 = Theme.Accent2 }, Theme.TweenFast):Play()
                         if callback then callback(key) end
                     end
                 end)
             end
 
             function api:ColorPicker(label, defaultColor, callback)
+                nextDivider(box)
                 local col = defaultColor or Theme.Accent
 
                 local row = Create("Frame", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 38),
+                    Size = UDim2.new(1, 0, 0, 40),
                     Parent = box,
                 })
 
@@ -1032,7 +1197,7 @@ function Prism:CreateWindow(opts)
                     TextSize = 13,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     TextYAlignment = Enum.TextYAlignment.Center,
-                    Size = UDim2.new(1, -44, 1, 0),
+                    Size = UDim2.new(1, -48, 1, 0),
                     Parent = row,
                 })
 
@@ -1041,27 +1206,27 @@ function Prism:CreateWindow(opts)
                     Text = "",
                     AnchorPoint = Vector2.new(1, 0.5),
                     Position = UDim2.new(1, 0, 0.5, 0),
-                    Size = UDim2.fromOffset(34, 28),
+                    Size = UDim2.fromOffset(38, 30),
                     AutoButtonColor = false,
-                    ZIndex = 5,
                     Parent = row,
                 })
                 Corner(swatch, Theme.CornerSm)
-                Stroke(swatch, Theme.Border, 2)
+                Stroke(swatch, Theme.BorderLight, 2, 0)
 
                 swatch.MouseButton1Click:Connect(function()
-                    if row:FindFirstChild("ColorPopup") then return end
+                    if GetDropdownLayer():FindFirstChild("ColorPopup") then return end
+                    local layer = GetDropdownLayer()
+                    local ap, as = swatch.AbsolutePosition, swatch.AbsoluteSize
                     local pop = Create("Frame", {
                         Name = "ColorPopup",
                         BackgroundColor3 = Theme.Card,
-                        Size = UDim2.new(1, 0, 0, 36),
-                        Position = UDim2.new(0, 0, 1, 6),
-                        ZIndex = 30,
-                        Parent = row,
+                        Position = UDim2.fromOffset(ap.X - 120, ap.Y + as.Y + 6),
+                        Size = UDim2.fromOffset(180, 40),
+                        Parent = layer,
                     })
                     Corner(pop)
                     Stroke(pop)
-                    Pad(pop, 10, 10, 10, 10)
+                    Pad(pop, 12, 12, 12, 12)
 
                     local bar = Create("TextButton", {
                         BackgroundColor3 = Color3.new(1, 1, 1),
@@ -1091,8 +1256,11 @@ function Prism:CreateWindow(opts)
                         if callback then callback(col) end
                     end
 
-                    bar.MouseButton1Down:Connect(function() pickAt(Mouse.X) end)
-                    local dragging = true
+                    local dragging = false
+                    bar.MouseButton1Down:Connect(function()
+                        dragging = true
+                        pickAt(Mouse.X)
+                    end)
                     local c1 = RunService.RenderStepped:Connect(function()
                         if dragging and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
                             pickAt(Mouse.X)
@@ -1103,7 +1271,7 @@ function Prism:CreateWindow(opts)
                             dragging = false
                             c1:Disconnect()
                             c2:Disconnect()
-                            task.delay(0.15, function() if pop.Parent then pop:Destroy() end end)
+                            task.delay(0.1, function() if pop.Parent then pop:Destroy() end end)
                         end
                     end)
                 end)
@@ -1115,53 +1283,78 @@ function Prism:CreateWindow(opts)
         return tabAPI
     end
 
-    -- Minimize / close
-    local savedSize = win.Size
     minBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
-        body.Visible = not minimized
         if minimized then
             savedSize = win.Size
-            Tween(win, { Size = UDim2.new(savedSize.X.Scale, savedSize.X.Offset, 0, 52) }, Theme.TweenMed):Play()
+            Tween(body, { BackgroundTransparency = 1 }, Theme.TweenMed):Play()
+            body.Visible = false
+            Tween(win, { Size = UDim2.new(savedSize.X.Scale, savedSize.X.Offset, 0, 56) }, Theme.TweenMed):Play()
+            Tween(shadow, { Size = UDim2.fromOffset(savedSize.X.Offset + 24, 80) }, Theme.TweenMed):Play()
         else
+            body.Visible = true
             Tween(win, { Size = savedSize }, Theme.TweenMed):Play()
+            Tween(shadow, { Size = UDim2.fromOffset(savedSize.X.Offset + 24, savedSize.Y.Offset + 24) }, Theme.TweenMed):Play()
+            Tween(body, { BackgroundTransparency = 0 }, Theme.TweenMed):Play()
         end
     end)
 
     closeBtn.MouseButton1Click:Connect(function()
         Tween(win, { BackgroundTransparency = 1 }, Theme.TweenFast):Play()
-        task.delay(0.25, function() win:Destroy() end)
+        Tween(shadow, { ImageTransparency = 1 }, Theme.TweenFast):Play()
+        task.delay(0.28, function()
+            win:Destroy()
+            shadow:Destroy()
+        end)
     end)
 
     Drag(win, titleBar)
+    win:GetPropertyChangedSignal("Position"):Connect(function()
+        shadow.Position = UDim2.new(
+            win.Position.X.Scale, win.Position.X.Offset - 12,
+            win.Position.Y.Scale, win.Position.Y.Offset - 10
+        )
+    end)
 
     UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         if input.KeyCode == toggleKey then
             win.Visible = not win.Visible
+            shadow.Visible = win.Visible
         end
     end)
 
+    win.BackgroundTransparency = 1
+    win.Size = UDim2.fromOffset(winSize.X * 0.92, winSize.Y * 0.92)
+    win.Position = UDim2.new(0.5, -winSize.X * 0.46, 0.5, -winSize.Y * 0.46)
+    Tween(win, {
+        Size = savedSize,
+        Position = UDim2.new(0.5, -winSize.X / 2, 0.5, -winSize.Y / 2),
+        BackgroundTransparency = 0,
+    }, Theme.TweenOpen):Play()
+
     task.defer(function()
         if activeTab then MoveIndicator(activeTab.Button) end
-        Prism:Notify({
-            Title = "Prism UI",
-            Content = "Loaded. " .. toggleKey.Name .. " — toggle window.",
-            Type = "Success",
-            Duration = 4,
-        })
+        if notifyOnLoad then
+            Prism:Notify({
+                Title = "Prism UI",
+                Content = toggleKey.Name .. " — toggle window",
+                Type = "Success",
+                Duration = 3,
+            })
+        end
     end)
 
     return window
 end
 
---// Demo
 if Prism.LoadDemo then
     local Window = Prism:CreateWindow({
         Name = "Prism UI",
         Subtitle = "v" .. Prism.Version,
-        Size = Vector2.new(620, 440),
+        Size = Vector2.new(640, 460),
         Keybind = Enum.KeyCode.RightControl,
+        NotifyOnLoad = true,
     })
 
     local Main = Window:Tab("Main", ">")
@@ -1186,7 +1379,7 @@ if Prism.LoadDemo then
 
     local Act = Main:Section("Actions")
     Act:Button("Test Notify", function()
-        Prism:Notify({ Title = "Hello", Content = "Everything works.", Type = "Info" })
+        Prism:Notify({ Title = "Hello", Content = "Prism UI v" .. Prism.Version, Type = "Info" })
     end)
 
     local Cfg = Settings:Section("Config")
@@ -1204,11 +1397,9 @@ if Prism.LoadDemo then
     end)
 
     local Info = About:Section("Info")
-    Info:Label("PrismUI — custom library in one file.")
-    Info:Label("Tabs overlay correctly. Sidebar icons aligned.")
-    Info:Label("RightControl toggles the window.")
+    Info:Label("PrismUI v" .. Prism.Version)
+    Info:Label("Polished layout, floating dropdowns, shadows.")
     Info:Button("Destroy UI", function() Prism:Destroy() end)
 end
 
 return Prism
-
