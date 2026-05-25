@@ -50,9 +50,67 @@ local Theme = {
 }
 
 local Prism = {}
-Prism.Version = "1.2.1"
+Prism.Version = "1.3.0"
 Prism.Theme = Theme
 Prism.LoadDemo = true
+
+Prism.Presets = {
+    Default = {
+        Background = Color3.fromRGB(8, 8, 14),
+        Surface = Color3.fromRGB(14, 14, 22),
+        SurfaceHover = Color3.fromRGB(22, 22, 34),
+        Card = Color3.fromRGB(18, 18, 28),
+        Border = Color3.fromRGB(36, 36, 54),
+        BorderLight = Color3.fromRGB(55, 55, 78),
+        Accent = Color3.fromRGB(108, 92, 231),
+        Accent2 = Color3.fromRGB(0, 210, 255),
+        ToggleOff = Color3.fromRGB(42, 42, 60),
+    },
+    Midnight = {
+        Background = Color3.fromRGB(6, 10, 18),
+        Surface = Color3.fromRGB(12, 18, 30),
+        SurfaceHover = Color3.fromRGB(20, 28, 44),
+        Card = Color3.fromRGB(14, 20, 34),
+        Border = Color3.fromRGB(30, 42, 62),
+        BorderLight = Color3.fromRGB(45, 60, 85),
+        Accent = Color3.fromRGB(52, 152, 219),
+        Accent2 = Color3.fromRGB(41, 128, 185),
+        ToggleOff = Color3.fromRGB(35, 48, 68),
+    },
+    Amethyst = {
+        Background = Color3.fromRGB(12, 8, 18),
+        Surface = Color3.fromRGB(20, 14, 28),
+        SurfaceHover = Color3.fromRGB(32, 22, 42),
+        Card = Color3.fromRGB(24, 16, 34),
+        Border = Color3.fromRGB(50, 36, 68),
+        BorderLight = Color3.fromRGB(70, 50, 90),
+        Accent = Color3.fromRGB(155, 89, 182),
+        Accent2 = Color3.fromRGB(236, 72, 153),
+        ToggleOff = Color3.fromRGB(48, 34, 62),
+    },
+    Emerald = {
+        Background = Color3.fromRGB(6, 12, 10),
+        Surface = Color3.fromRGB(12, 20, 16),
+        SurfaceHover = Color3.fromRGB(20, 32, 26),
+        Card = Color3.fromRGB(14, 24, 20),
+        Border = Color3.fromRGB(30, 52, 42),
+        BorderLight = Color3.fromRGB(45, 72, 58),
+        Accent = Color3.fromRGB(46, 204, 113),
+        Accent2 = Color3.fromRGB(26, 188, 156),
+        ToggleOff = Color3.fromRGB(34, 52, 44),
+    },
+    Rose = {
+        Background = Color3.fromRGB(14, 8, 10),
+        Surface = Color3.fromRGB(24, 14, 18),
+        SurfaceHover = Color3.fromRGB(36, 22, 28),
+        Card = Color3.fromRGB(28, 16, 22),
+        Border = Color3.fromRGB(58, 36, 44),
+        BorderLight = Color3.fromRGB(78, 48, 58),
+        Accent = Color3.fromRGB(255, 105, 130),
+        Accent2 = Color3.fromRGB(255, 160, 90),
+        ToggleOff = Color3.fromRGB(52, 34, 40),
+    },
+}
 
 local RootGui
 local NotifGui
@@ -116,7 +174,7 @@ local function HList(parent, gap, valign)
 end
 
 local function Gradient(parent, c1, c2, rot)
-    return Create("UIGradient", {
+    local g = Create("UIGradient", {
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, c1 or Theme.Accent),
             ColorSequenceKeypoint.new(1, c2 or Theme.Accent2),
@@ -124,6 +182,84 @@ local function Gradient(parent, c1, c2, rot)
         Rotation = rot or 30,
         Parent = parent,
     })
+    g:SetAttribute("PrismTheme", "AccentGradient")
+    return g
+end
+
+local function Tag(inst, role)
+    if inst then inst:SetAttribute("PrismTheme", role) end
+    return inst
+end
+
+local function ApplyAccentGradient(g)
+    if g and g:IsA("UIGradient") then
+        g.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Theme.Accent),
+            ColorSequenceKeypoint.new(1, Theme.Accent2),
+        })
+    end
+end
+
+function Prism:ApplyTheme()
+    Theme.ToggleOn = Theme.Accent
+
+    local roots = {}
+    if RootGui and RootGui.Parent then table.insert(roots, RootGui) end
+    if NotifGui and NotifGui.Parent then table.insert(roots, NotifGui) end
+
+    for _, root in ipairs(roots) do
+        for _, inst in ipairs(root:GetDescendants()) do
+            local role = inst:GetAttribute("PrismTheme")
+            if role == "Background" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Background end
+            elseif role == "Surface" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Surface end
+            elseif role == "Card" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Card end
+            elseif role == "Accent" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Accent end
+            elseif role == "AccentGradient" then
+                ApplyAccentGradient(inst)
+            elseif role == "Text" then
+                if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
+                    inst.TextColor3 = Theme.Text
+                end
+            elseif role == "TextDim" then
+                if inst:IsA("TextLabel") or inst:IsA("TextButton") then
+                    inst.TextColor3 = Theme.TextDim
+                end
+            elseif role == "AccentText" then
+                if inst:IsA("TextLabel") or inst:IsA("TextButton") then
+                    inst.TextColor3 = Theme.Accent2
+                end
+            elseif role == "Border" then
+                if inst:IsA("UIStroke") then inst.Color = Theme.Border end
+            elseif role == "BorderLight" then
+                if inst:IsA("UIStroke") then inst.Color = Theme.BorderLight end
+            elseif role == "ButtonPrimary" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Accent end
+            elseif role == "ToggleTrack" then
+                if inst:IsA("GuiObject") then
+                    local on = inst:GetAttribute("PrismOn") == true
+                    inst.BackgroundColor3 = on and Theme.ToggleOn or Theme.ToggleOff
+                end
+            elseif role == "ToggleOff" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.ToggleOff end
+            elseif role == "SliderFill" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Accent end
+            elseif role == "TabIndicator" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Accent end
+            elseif role == "IconBg" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Accent end
+            elseif role == "Divider" then
+                if inst:IsA("GuiObject") then inst.BackgroundColor3 = Theme.Border end
+            elseif role == "ScrollBar" then
+                if inst:IsA("ScrollingFrame") then inst.ScrollBarImageColor3 = Theme.Accent end
+            elseif role == "SurfaceHover" then
+                -- used only for hover memory; skip static apply
+            end
+        end
+    end
 end
 
 local function Hover(btn, normal, hover)
@@ -326,10 +462,29 @@ function Prism:Destroy()
     if NotifGui then NotifGui:Destroy() NotifGui = nil end
     NotifList = nil
     DropdownLayer = nil
+    Prism.Windows = {}
 end
 
-function Prism:SetTheme(t)
-    for k, v in pairs(t or {}) do Theme[k] = v end
+function Prism:SetTheme(nameOrTable)
+    if type(nameOrTable) == "string" then
+        local preset = Prism.Presets[nameOrTable]
+        if not preset then
+            warn("[PrismUI] Unknown theme preset:", nameOrTable)
+            return
+        end
+        for k, v in pairs(preset) do
+            if typeof(v) == "Color3" then Theme[k] = v end
+        end
+    elseif type(nameOrTable) == "table" then
+        for k, v in pairs(nameOrTable) do
+            if typeof(v) == "Color3" then Theme[k] = v end
+        end
+    end
+    Theme.ToggleOn = Theme.Accent
+    self:ApplyTheme()
+    for _, w in ipairs(self.Windows or {}) do
+        if w._RefreshTabs then w:_RefreshTabs() end
+    end
 end
 
 function Prism:CreateWindow(opts)
@@ -341,6 +496,7 @@ function Prism:CreateWindow(opts)
     local notifyOnLoad = opts.NotifyOnLoad == true
 
     GetRoot()
+    Prism.Windows = Prism.Windows or {}
 
     local tabs = {}
     local activeTab = nil
@@ -360,7 +516,7 @@ function Prism:CreateWindow(opts)
         Parent = RootGui,
     })
 
-    local win = Create("Frame", {
+    local win = Tag(Create("Frame", {
         Name = "PrismWindow",
         BackgroundColor3 = Theme.Background,
         BorderSizePixel = 0,
@@ -368,9 +524,9 @@ function Prism:CreateWindow(opts)
         Position = UDim2.new(0.5, -winSize.X / 2, 0.5, -winSize.Y / 2),
         ClipsDescendants = true,
         Parent = RootGui,
-    })
+    }), "Background")
     Corner(win, UDim.new(0, 12))
-    Stroke(win, Theme.BorderLight, 1, 0.55)
+    Tag(Stroke(win, Theme.BorderLight, 1, 0.55), "BorderLight")
 
     shadow.Position = UDim2.new(
         win.Position.X.Scale, win.Position.X.Offset - 12,
@@ -383,23 +539,22 @@ function Prism:CreateWindow(opts)
     local SIDEBAR_GAP = 8
 
     -- Header (fills top, clipped by window corners)
-    local header = Create("Frame", {
+    local header = Tag(Create("Frame", {
         Name = "Header",
         BackgroundColor3 = Theme.Background,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, HEADER_H),
         Position = UDim2.new(0, 0, 0, 0),
         Parent = win,
-    })
+    }), "Background")
 
-    -- Accent line inset so it respects rounded corners
-    local accentBar = Create("Frame", {
+    local accentBar = Tag(Create("Frame", {
         BorderSizePixel = 0,
         BackgroundColor3 = Theme.Accent,
         Size = UDim2.new(1, -(WIN_PAD * 2), 0, 2),
         Position = UDim2.new(0, WIN_PAD, 0, 0),
         Parent = header,
-    })
+    }), "Accent")
     Gradient(accentBar, Theme.Accent, Theme.Accent2, 0)
 
     local titleBar = Create("Frame", {
@@ -409,14 +564,14 @@ function Prism:CreateWindow(opts)
         Parent = header,
     })
 
-    Create("Frame", {
+    Tag(Create("Frame", {
         BackgroundColor3 = Theme.Border,
         BackgroundTransparency = 0.35,
         BorderSizePixel = 0,
         Size = UDim2.new(1, -(WIN_PAD * 2), 0, 1),
         Position = UDim2.new(0, WIN_PAD, 1, 0),
         Parent = header,
-    })
+    }), "Divider")
 
     local titleBlock = Create("Frame", {
         BackgroundTransparency = 1,
@@ -426,7 +581,7 @@ function Prism:CreateWindow(opts)
     })
     VList(titleBlock, 1)
 
-    Create("TextLabel", {
+    Tag(Create("TextLabel", {
         BackgroundTransparency = 1,
         Font = Theme.FontBold,
         Text = title,
@@ -436,9 +591,9 @@ function Prism:CreateWindow(opts)
         Size = UDim2.new(1, 0, 0, 22),
         LayoutOrder = 1,
         Parent = titleBlock,
-    })
+    }), "Text")
     if subtitle ~= "" then
-        Create("TextLabel", {
+        Tag(Create("TextLabel", {
             BackgroundTransparency = 1,
             Font = Theme.FontLight,
             Text = subtitle,
@@ -448,7 +603,7 @@ function Prism:CreateWindow(opts)
             Size = UDim2.new(1, 0, 0, 14),
             LayoutOrder = 2,
             Parent = titleBlock,
-        })
+        }), "TextDim")
     end
 
     local btnRow = Create("Frame", {
@@ -460,7 +615,7 @@ function Prism:CreateWindow(opts)
     HList(btnRow, 8)
 
     local function WinBtn(symbol, isClose)
-        local b = Create("TextButton", {
+        local b = Tag(Create("TextButton", {
             BackgroundColor3 = Theme.Surface,
             BackgroundTransparency = 0.3,
             Text = symbol,
@@ -470,8 +625,9 @@ function Prism:CreateWindow(opts)
             Size = UDim2.fromOffset(30, 30),
             AutoButtonColor = false,
             Parent = btnRow,
-        })
+        }), "Surface")
         Corner(b, Theme.CornerSm)
+        Tag(b, "TextDim")
         if isClose then
             b.MouseEnter:Connect(function()
                 Tween(b, { BackgroundColor3 = Theme.CloseHover, TextColor3 = Theme.Text }, Theme.TweenFast):Play()
@@ -496,16 +652,16 @@ function Prism:CreateWindow(opts)
         Parent = win,
     })
 
-    local sidebar = Create("Frame", {
+    local sidebar = Tag(Create("Frame", {
         BackgroundColor3 = Theme.Surface,
         BackgroundTransparency = 0,
         Size = UDim2.new(0, SIDEBAR_W, 1, 0),
         Parent = body,
-    })
+    }), "Surface")
     Corner(sidebar, UDim.new(0, 8))
     Pad(sidebar, 8, 6, 8, 6)
 
-    Create("TextLabel", {
+    Tag(Create("TextLabel", {
         BackgroundTransparency = 1,
         Font = Theme.FontBold,
         Text = "MENU",
@@ -515,7 +671,7 @@ function Prism:CreateWindow(opts)
         Size = UDim2.new(1, 0, 0, 12),
         Position = UDim2.new(0, 2, 0, 0),
         Parent = sidebar,
-    })
+    }), "TextDim")
 
     local tabButtons = Create("Frame", {
         BackgroundTransparency = 1,
@@ -525,17 +681,16 @@ function Prism:CreateWindow(opts)
     })
     VList(tabButtons, 4)
 
-    local tabIndicator = Create("Frame", {
+    local tabIndicator = Tag(Create("Frame", {
         BackgroundColor3 = Theme.Accent,
         BorderSizePixel = 0,
         Size = UDim2.new(0, 2, 0, 34),
         Position = UDim2.new(0, 2, 0, 0),
         ZIndex = 5,
         Parent = tabButtons,
-    })
+    }), "TabIndicator")
 
-    -- Thin divider (not a thick bar)
-    Create("Frame", {
+    Tag(Create("Frame", {
         Name = "Divider",
         BackgroundColor3 = Theme.Border,
         BackgroundTransparency = 0.25,
@@ -543,16 +698,16 @@ function Prism:CreateWindow(opts)
         Size = UDim2.new(0, 1, 1, -4),
         Position = UDim2.new(0, SIDEBAR_W + math.floor(SIDEBAR_GAP / 2), 0, 2),
         Parent = body,
-    })
+    }), "Divider")
 
-    local content = Create("Frame", {
+    local content = Tag(Create("Frame", {
         BackgroundColor3 = Theme.Card,
         BackgroundTransparency = 0.35,
         Size = UDim2.new(1, -(SIDEBAR_W + SIDEBAR_GAP + 1), 1, 0),
         Position = UDim2.new(0, SIDEBAR_W + SIDEBAR_GAP + 1, 0, 0),
         ClipsDescendants = true,
         Parent = body,
-    })
+    }), "Card")
     Corner(content, UDim.new(0, 8))
 
     local pagesHost = Create("Frame", {
@@ -610,7 +765,7 @@ function Prism:CreateWindow(opts)
             Parent = pagesHost,
         })
 
-        local pageScroll = Create("ScrollingFrame", {
+        local pageScroll = Tag(Create("ScrollingFrame", {
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 1, 0),
@@ -621,7 +776,7 @@ function Prism:CreateWindow(opts)
             CanvasSize = UDim2.new(0, 0, 0, 0),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             Parent = page,
-        })
+        }), "ScrollBar")
         Pad(pageScroll, 14, 14, 14, 14)
 
         local pageContent = Create("Frame", {
@@ -660,16 +815,16 @@ function Prism:CreateWindow(opts)
         })
         HList(tabInner, 6, Enum.VerticalAlignment.Center)
 
-        local iconBg = Create("Frame", {
+        local iconBg = Tag(Create("Frame", {
             BackgroundColor3 = Theme.Accent,
             BackgroundTransparency = isFirst and 0.8 or 1,
             Size = UDim2.fromOffset(22, 22),
             LayoutOrder = 1,
             Parent = tabInner,
-        })
+        }), "IconBg")
         Corner(iconBg, UDim.new(0, 5))
 
-        local iconLbl = Create("TextLabel", {
+        local iconLbl = Tag(Create("TextLabel", {
             Name = "Icon",
             BackgroundTransparency = 1,
             Font = Theme.FontBold,
@@ -678,9 +833,9 @@ function Prism:CreateWindow(opts)
             TextSize = 12,
             Size = UDim2.fromScale(1, 1),
             Parent = iconBg,
-        })
+        }), "AccentText")
 
-        local titleLbl = Create("TextLabel", {
+        local titleLbl = Tag(Create("TextLabel", {
             Name = "Title",
             BackgroundTransparency = 1,
             Font = Theme.Font,
@@ -692,7 +847,7 @@ function Prism:CreateWindow(opts)
             Size = UDim2.new(1, -30, 0, 18),
             LayoutOrder = 2,
             Parent = tabInner,
-        })
+        }), isFirst and "Text" or "TextDim")
 
         local tabData = {
             Name = name,
@@ -739,16 +894,16 @@ function Prism:CreateWindow(opts)
             })
             HList(headRow, 8, Enum.VerticalAlignment.Center)
 
-            local accentMark = Create("Frame", {
+            local accentMark = Tag(Create("Frame", {
                 BackgroundColor3 = Theme.Accent,
                 Size = UDim2.new(0, 3, 0, 14),
                 BorderSizePixel = 0,
                 LayoutOrder = 1,
                 Parent = headRow,
-            })
+            }), "Accent")
             Corner(accentMark, UDim.new(0, 2))
 
-            Create("TextLabel", {
+            Tag(Create("TextLabel", {
                 BackgroundTransparency = 1,
                 Font = Theme.FontBold,
                 Text = string.upper(sectionName),
@@ -758,18 +913,18 @@ function Prism:CreateWindow(opts)
                 Size = UDim2.new(1, -12, 0, 16),
                 LayoutOrder = 2,
                 Parent = headRow,
-            })
+            }), "TextDim")
 
-            local box = Create("Frame", {
+            local box = Tag(Create("Frame", {
                 BackgroundColor3 = Theme.Card,
                 BackgroundTransparency = 0.2,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 LayoutOrder = 2,
                 Parent = block,
-            })
+            }), "Card")
             Corner(box, Theme.CornerSm)
-            Stroke(box, Theme.Border, 1, 0.5)
+            Tag(Stroke(box, Theme.Border, 1, 0.5), "Border")
             Pad(box, 6, 10, 6, 10)
             VList(box, 2)
 
@@ -778,7 +933,7 @@ function Prism:CreateWindow(opts)
 
             function api:Label(text)
                 nextDivider(box)
-                Create("TextLabel", {
+                Tag(Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.FontLight,
                     Text = text,
@@ -789,12 +944,12 @@ function Prism:CreateWindow(opts)
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Size = UDim2.new(1, 0, 0, 0),
                     Parent = box,
-                })
+                }), "TextDim")
             end
 
             function api:Button(text, callback)
                 nextDivider(box)
-                local b = Create("TextButton", {
+                local b = Tag(Create("TextButton", {
                     BackgroundColor3 = Theme.Accent,
                     Text = text,
                     Font = Theme.FontBold,
@@ -803,10 +958,10 @@ function Prism:CreateWindow(opts)
                     Size = UDim2.new(1, 0, 0, 38),
                     AutoButtonColor = false,
                     Parent = box,
-                })
+                }), "ButtonPrimary")
                 Corner(b, Theme.CornerSm)
                 Gradient(b)
-                Stroke(b, Theme.Accent2, 1, 0.7)
+                Tag(Stroke(b, Theme.Accent2, 1, 0.7), "BorderLight")
                 Ripple(b)
                 b.MouseButton1Click:Connect(function()
                     if callback then callback() end
@@ -822,7 +977,7 @@ function Prism:CreateWindow(opts)
                     Parent = box,
                 })
 
-                Create("TextLabel", {
+                Tag(Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.Font,
                     Text = label,
@@ -832,9 +987,9 @@ function Prism:CreateWindow(opts)
                     TextYAlignment = Enum.TextYAlignment.Center,
                     Size = UDim2.new(1, -56, 1, 0),
                     Parent = row,
-                })
+                }), "Text")
 
-                local track = Create("TextButton", {
+                local track = Tag(Create("TextButton", {
                     BackgroundColor3 = on and Theme.ToggleOn or Theme.ToggleOff,
                     Text = "",
                     AnchorPoint = Vector2.new(1, 0.5),
@@ -842,9 +997,10 @@ function Prism:CreateWindow(opts)
                     Size = UDim2.fromOffset(48, 26),
                     AutoButtonColor = false,
                     Parent = row,
-                })
+                }), "ToggleTrack")
+                track:SetAttribute("PrismOn", on)
                 Corner(track, UDim.new(1, 0))
-                Stroke(track, Theme.BorderLight, 1, 0.6)
+                Tag(Stroke(track, Theme.BorderLight, 1, 0.6), "BorderLight")
 
                 local knob = Create("Frame", {
                     BackgroundColor3 = Theme.Text,
@@ -858,6 +1014,7 @@ function Prism:CreateWindow(opts)
 
                 local function set(v, fire)
                     on = v
+                    track:SetAttribute("PrismOn", on)
                     Tween(track, { BackgroundColor3 = on and Theme.ToggleOn or Theme.ToggleOff }, Theme.TweenFast):Play()
                     Tween(knob, {
                         Position = on and UDim2.new(1, -23, 0.5, 0) or UDim2.new(0, 3, 0.5, 0),
@@ -889,7 +1046,7 @@ function Prism:CreateWindow(opts)
                     Parent = wrap,
                 })
 
-                Create("TextLabel", {
+                Tag(Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.Font,
                     Text = label,
@@ -898,9 +1055,9 @@ function Prism:CreateWindow(opts)
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Size = UDim2.new(1, -40, 1, 0),
                     Parent = head,
-                })
+                }), "Text")
 
-                local num = Create("TextLabel", {
+                local num = Tag(Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.FontBold,
                     Text = tostring(val),
@@ -910,24 +1067,24 @@ function Prism:CreateWindow(opts)
                     Size = UDim2.fromOffset(40, 18),
                     Position = UDim2.new(1, -40, 0, 0),
                     Parent = head,
-                })
+                }), "AccentText")
 
-                local track = Create("TextButton", {
+                local track = Tag(Create("TextButton", {
                     BackgroundColor3 = Theme.ToggleOff,
                     Text = "",
                     Size = UDim2.new(1, 0, 0, 12),
                     AutoButtonColor = false,
                     LayoutOrder = 2,
                     Parent = wrap,
-                })
+                }), "ToggleOff")
                 Corner(track, UDim.new(1, 0))
 
-                local fill = Create("Frame", {
+                local fill = Tag(Create("Frame", {
                     BackgroundColor3 = Theme.Accent,
                     Size = UDim2.new((val - min) / math.max(max - min, 1), 0, 1, 0),
                     BorderSizePixel = 0,
                     Parent = track,
-                })
+                }), "SliderFill")
                 Corner(fill, UDim.new(1, 0))
                 Gradient(fill)
 
@@ -979,7 +1136,7 @@ function Prism:CreateWindow(opts)
                 })
                 VList(wrap, 6)
 
-                Create("TextLabel", {
+                Tag(Create("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Theme.Font,
                     Text = label,
@@ -989,9 +1146,9 @@ function Prism:CreateWindow(opts)
                     Size = UDim2.new(1, 0, 0, 16),
                     LayoutOrder = 1,
                     Parent = wrap,
-                })
+                }), "Text")
 
-                local drop = Create("TextButton", {
+                local drop = Tag(Create("TextButton", {
                     BackgroundColor3 = Theme.Surface,
                     Text = "  " .. pick,
                     Font = Theme.Font,
@@ -1003,9 +1160,9 @@ function Prism:CreateWindow(opts)
                     AutoButtonColor = false,
                     LayoutOrder = 2,
                     Parent = wrap,
-                })
+                }), "Surface")
                 Corner(drop, Theme.CornerSm)
-                Stroke(drop)
+                Tag(Stroke(drop), "Border")
                 Pad(drop, 0, 28, 0, 10)
 
                 Create("TextLabel", {
@@ -1367,6 +1524,16 @@ function Prism:CreateWindow(opts)
         end
     end)
 
+    function window:ApplyTheme()
+        Prism:ApplyTheme()
+    end
+
+    function window:_RefreshTabs()
+        if activeTab then SelectTab(activeTab) end
+    end
+
+    table.insert(Prism.Windows, window)
+
     return window
 end
 
@@ -1408,14 +1575,9 @@ if Prism.LoadDemo then
     Cfg:Input("Username", "Enter name...", function(t)
         Prism:Notify({ Title = "Input", Content = t, Type = "Info" })
     end)
-    Cfg:Dropdown("Theme", { "Default", "Midnight", "Amethyst" }, "Default", function(v)
-        if v == "Amethyst" then
-            Prism:SetTheme({ Accent = Color3.fromRGB(155, 89, 182), Accent2 = Color3.fromRGB(236, 72, 153) })
-        elseif v == "Midnight" then
-            Prism:SetTheme({ Accent = Color3.fromRGB(52, 152, 219), Accent2 = Color3.fromRGB(41, 128, 185) })
-        else
-            Prism:SetTheme({ Accent = Color3.fromRGB(108, 92, 231), Accent2 = Color3.fromRGB(0, 210, 255) })
-        end
+    Cfg:Dropdown("Theme", { "Default", "Midnight", "Amethyst", "Emerald", "Rose" }, "Default", function(v)
+        Prism:SetTheme(v)
+        Prism:Notify({ Title = "Theme", Content = v .. " applied", Type = "Success", Duration = 2 })
     end)
 
     local Info = About:Section("Info")
@@ -1425,4 +1587,3 @@ if Prism.LoadDemo then
 end
 
 return Prism
-
