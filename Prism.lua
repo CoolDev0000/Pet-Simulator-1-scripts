@@ -1905,6 +1905,26 @@ function Prism:CreateWindow(opts)
             end
         end
 
+        local sectionCache = {}
+
+        function tabAPI:GetSection(name)
+            name = name or "General"
+            if not sectionCache[name] then
+                sectionCache[name] = tabAPI:Section(name)
+            end
+            return sectionCache[name]
+        end
+
+        local widgetMethods = {
+            "Label", "Button", "Toggle", "Slider", "Dropdown", "Input", "Keybind", "ColorPicker",
+        }
+        for _, methodName in ipairs(widgetMethods) do
+            tabAPI[methodName] = function(_, ...)
+                local sec = tabAPI:GetSection()
+                return sec[methodName](sec, ...)
+            end
+        end
+
         return tabAPI
     end
 
