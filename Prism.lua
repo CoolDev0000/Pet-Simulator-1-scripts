@@ -173,11 +173,14 @@ local function Ripple(btn)
     end)
 end
 
---// Notifications
+--// Notifications (holder in Lua — Roblox Instances cannot use custom ._ fields)
 local NotifGui
+local NotifList
 
 local function GetNotifGui()
-    if NotifGui and NotifGui.Parent then return NotifGui end
+    if NotifGui and NotifGui.Parent and NotifList and NotifList.Parent then
+        return NotifGui, NotifList
+    end
     NotifGui = Create("ScreenGui", {
         Name = "PrismNotifications",
         ResetOnSpawn = false,
@@ -186,7 +189,8 @@ local function GetNotifGui()
         Parent = GetParent(),
     })
     Protect(NotifGui)
-    NotifGui._List = Create("Frame", {
+    NotifList = Create("Frame", {
+        Name = "List",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, -20, 0, 20),
@@ -194,8 +198,8 @@ local function GetNotifGui()
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = NotifGui,
     })
-    VList(NotifGui._List, 10)
-    return NotifGui
+    VList(NotifList, 10)
+    return NotifGui, NotifList
 end
 
 function Prism:Notify(opts)
@@ -206,8 +210,7 @@ function Prism:Notify(opts)
     local kind = opts.Type or "Info"
     local accent = ({ Info = Theme.Accent, Success = Theme.Success, Warning = Theme.Warning, Error = Theme.Error })[kind] or Theme.Accent
 
-    GetNotifGui()
-    local holder = NotifGui._List
+    local _, holder = GetNotifGui()
 
     local card = Create("Frame", {
         BackgroundColor3 = Theme.Card,
@@ -295,6 +298,7 @@ end
 function Prism:Destroy()
     if RootGui then RootGui:Destroy() RootGui = nil end
     if NotifGui then NotifGui:Destroy() NotifGui = nil end
+    NotifList = nil
 end
 
 function Prism:SetTheme(t)
@@ -1207,3 +1211,4 @@ if Prism.LoadDemo then
 end
 
 return Prism
+
